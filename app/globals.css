@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --golf-green-900: #051b14;
+  --golf-green-800: #08251a;
+  --golf-green-700: #0a2e1f;
+  --golf-green-600: #0f3d24;
+  --golf-gold: #c5a36f;
+  --golf-gold-light: #d9c38f;
+  --golf-cream: #f5f3eb;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #0f2c1f;   /* noticeably softer/lighter dark green per user request */
+  color: #f5f3eb;
+}
+
+/* Premium golf theme - significantly lighter cards for premium feel */
+.golf-card {
+  background-color: #1f4a3a;   /* much lighter surface as requested */
+  border: 1px solid #2a5a48;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.golf-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border-color: #c5a36f;
+}
+
+.golf-btn {
+  background-color: #c5a36f;
+  color: #051b14;
+  font-weight: 600;
+  transition: all 0.1s ease;
+  box-shadow: 0 2px 6px rgba(197, 163, 111, 0.2);
+}
+
+.golf-btn:hover {
+  background-color: #d9c38f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(197, 163, 111, 0.3);
+}
+
+.golf-btn-secondary {
+  background-color: #1f4a3a;
+  color: #f5f3eb;
+  border: 1px solid #c5a36f;
+}
+
+.golf-btn-secondary:hover {
+  background-color: #2a5a48;
+  border-color: #d9c38f;
+}
+
+.golf-input {
+  background-color: #153a2a;   /* mid-tone surface for better hierarchy on new lighter bg */
+  border: 2px solid #2a5a48;
+  color: #f5f3eb;
+  transition: border-color 0.1s ease;
+}
+
+.golf-input:focus {
+  border-color: #c5a36f;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(197, 163, 111, 0.12);
+}
+
+.golf-input::placeholder {
+  color: #5a6b62;
+}
+
+/* Score entry - VERY large for real on-course speed (mobile-first) */
+.score-input {
+  width: 72px;
+  height: 72px;
+  font-size: 1.9rem;
+  font-weight: 800;
+  text-align: center;
+  background-color: #153a2a;
+  border: 4px solid #2a5a48;
+  color: #f5f3eb;
+  border-radius: 18px;
+  transition: all 0.06s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.score-input:focus {
+  border-color: #c5a36f;
+  box-shadow: 0 0 0 6px rgba(197, 163, 111, 0.25);
+  background-color: #1f4a3a;
+}
+
+.score-btn {
+  width: 68px;
+  height: 68px;
+  font-size: 2.1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #2a5a48;
+  color: #c5a36f;
+  border-radius: 9999px;
+  border: 3px solid #1f4a3a;
+  transition: all 0.04s ease;
+  user-select: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+.score-btn:active {
+  transform: scale(0.88);
+  background-color: #c5a36f;
+  color: #051b14;
+  border-color: #c5a36f;
+}
+
+/* Premium saved indicator */
+.saved-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #5a6b62;
+}
+
+
+/* Leaderboard */
+.leaderboard-row {
+  transition: background-color 0.1s ease;
+}
+
+.leaderboard-row:nth-child(even) {
+  background-color: rgba(31, 74, 58, 0.35);   /* lighter to match new card tone */
+}
+
+.leaderboard-row:hover {
+  background-color: rgba(197, 163, 111, 0.1);
+}
+
+/* Modal */
+.modal {
+  animation: modalEnter 0.15s ease-out;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile optimizations - MAXIMUM finger-friendly sizes for real on-course use on iPhone */
+@media (max-width: 640px) {
+  .score-input {
+    width: 72px;
+    height: 72px;
+    font-size: 2rem;
+    border-width: 5px;
+  }
+  
+  .score-btn {
+    width: 66px;
+    height: 66px;
+    font-size: 2.1rem;
+    border-width: 4px;
+  }
+
+  /* iOS-native modal scrolling + safe areas */
+  .modal {
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+/* iOS-friendly global improvements */
+html, body {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+/* Safe area support for notched iPhones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .modal {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Utility: hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
