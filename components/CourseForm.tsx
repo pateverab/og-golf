@@ -16,19 +16,20 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }))
   );
 
-  const loadTemplate = (template: any) => {
-    setName(template.name);
-    setLocation(template.location);
-    setHoleCount(template.holeCount);
+    const loadTemplate = (template: any) => {
+    setName(template.name || "");
+    setLocation(template.location || "");
+    setHoleCount(template.holeCount || 18);
 
-    if (template.suggestedPars?.length > 0) {
-      const newHoles = template.suggestedPars.map((par: number, index: number) => ({
+    if (template.suggestedPars && Array.isArray(template.suggestedPars) && template.suggestedPars.length > 0) {
+      const newHoles: Hole[] = template.suggestedPars.map((par: number, index: number) => ({
         number: index + 1,
         par: par,
       }));
       setHoles(newHoles);
     } else {
-      setHoles(Array.from({ length: template.holeCount }, (_, i) => ({
+      // Fallback to all 4s
+      setHoles(Array.from({ length: template.holeCount || 18 }, (_, i) => ({
         number: i + 1,
         par: 4,
       })));
