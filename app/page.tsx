@@ -252,6 +252,48 @@ export default function GolfScoreTracker() {
   const viewingRound = rounds.find((r) => r.id === viewingRoundId);
   const viewingCourse = viewingRound ? courses.find((c) => c.id === viewingRound.courseId) : null;
 
+  // ==================== BACKUP & RESTORE ====================
+  const exportBackup = () => {
+    const backup = {
+      courses,
+      players,
+      rounds,
+      exportDate: new Date().toISOString(),
+      version: "1.0"
+    };
+
+    const dataStr = JSON.stringify(backup, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `og-golf-backup-${new Date().toISOString().slice(0,10)}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const backup = JSON.parse(event.target?.result as string);
+        
+        if (backup.courses) setCourses(backup.courses);
+        if (backup.players) setPlayers(backup.players);
+        if (backup.rounds) setRounds(backup.rounds);
+
+        alert("✅ Backup imported successfully!");
+        e.target.value = '';
+      } catch (err) {
+        alert("❌ Invalid backup file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // ==================== DERIVED DATA ====================
   const completedRounds = rounds.filter((r) => r.completed);
 
@@ -637,7 +679,41 @@ export default function GolfScoreTracker() {
               ) : (
                 <div className="golf-card rounded-2xl p-8 text-center text-[#c5a36f]/70">Complete your first round to see history here.</div>
               )}
+                        </section>
+
+            {/* ========== BACKUP & RESTORE ========== */}
+            <section className="mt-8 pt-6 border-t border-[#2a5a48]">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h2 className="text-xl font-semibold">Backup & Restore</h2>
+              </div>
+              <div className="golf-card rounded-3xl p-6 space-y-4">
+                <div className="text-sm text-[#c5a36f]/80">
+                  Save all your courses, players, and rounds as a backup file.
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={exportBackup}
+                    className="flex-1 py-4 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-[#1f4a3a] transition"
+                  >
+                    📤 Export Backup (JSON)
+                  </button>
+                  
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={importBackup}
+                      className="hidden"
+                    />
+                    <div className="py-4 rounded-2xl bg-[#c5a36f] text-[#051b14] font-semibold text-center hover:bg-white transition">
+                      📥 Import Backup
+                    </div>
+                  </label>
+                </div>
+              </div>
             </section>
+
           </>
         )}
 
