@@ -9,13 +9,12 @@ import {
   getTotalScoreForPlayerInRound,
   getScoreVsParForPlayerInRound,
   getCourseTotalPar,
-    getPlayerHoleBreakdown,
 } from "@/lib/calculations";
 import { Modal } from "@/components/Modal";
 import { CourseForm } from "@/components/CourseForm";
 import { PlayerForm } from "@/components/PlayerForm";
+import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
-
 export default function GolfScoreTracker() {
   // Core data
   const [courses, setCourses] = useState<Course[]>([]);
@@ -804,56 +803,25 @@ export default function GolfScoreTracker() {
         <PlayerForm onSave={handleAddPlayer} onCancel={() => setIsPlayerModalOpen(false)} />
       </Modal>
 
-      {/* Player Performance Detail Modal */}
-      <Modal
+                  {/* Improved Player Detail Modal */}
+      <PlayerDetailModal
         isOpen={!!playerDetailModal}
         onClose={() => setPlayerDetailModal(null)}
-        title="Player Round Detail"
-        size="lg"
-      >
-        {playerDetailModal && (() => {
-          const round = rounds.find((r) => r.id === playerDetailModal.roundId);
-          if (!round) return null;
-          const course = courses.find((c) => c.id === round.courseId);
-          if (!course) return null;
-          const ps = round.playerScores.find((p) => p.playerId === playerDetailModal.playerId);
-          if (!ps) return null;
-          const pl = players.find((p) => p.id === playerDetailModal.playerId);
-          const breakdown = getPlayerHoleBreakdown(ps, course);
-          const total = getTotalScoreForPlayerInRound(ps, course);
-          const vsPar = getScoreVsParForPlayerInRound(ps, course);
-
-          return (
-            <div className="space-y-4">
-              <div>
-                <div className="text-2xl font-semibold">{pl?.name}</div>
-                <div className="text-sm text-[#c5a36f]">Handicap: {pl?.handicap}</div>
-                <div className="mt-1 text-lg font-medium">
-                  Total: {total} ({vsPar === 0 ? "E" : vsPar > 0 ? `+${vsPar}` : vsPar})
-                </div>
-              </div>
-
-              <div className="divide-y divide-[#2a5a48] text-sm">
-                {breakdown.map((item) => (
-                  <div key={item.holeNumber} className="flex justify-between py-2">
-                    <span>
-                      Hole {item.holeNumber} (Par {item.par})
-                    </span>
-                    <span className="font-medium tabular-nums">
-                      {item.score ?? "—"}
-                      {item.vsPar !== null && (
-                        <span className={`ml-2 ${item.vsPar < 0 ? "text-emerald-400" : item.vsPar > 0 ? "text-red-400" : "text-[#c5a36f]"}`}>
-                          ({item.vsPar === 0 ? "E" : item.vsPar > 0 ? `+${item.vsPar}` : item.vsPar})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-      </Modal>
+        player={playerDetailModal 
+          ? players.find((p) => p.id === playerDetailModal.playerId) || null 
+          : null}
+        round={playerDetailModal 
+          ? rounds.find((r) => r.id === playerDetailModal.roundId) || null 
+          : null}
+        course={playerDetailModal 
+          ? courses.find((c) => c.id === 
+              rounds.find((r) => r.id === playerDetailModal.roundId)?.courseId) || null 
+          : null}
+        playerScore={playerDetailModal 
+          ? rounds.find((r) => r.id === playerDetailModal.roundId)
+              ?.playerScores.find((ps) => ps.playerId === playerDetailModal.playerId) || null 
+          : null}
+      />
 
       {/* Footer note */}
       <div className="text-center text-[10px] text-[#c5a36f]/40 mt-12 pb-6">
