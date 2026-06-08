@@ -16,19 +16,20 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }))
   );
 
-    const loadTemplate = (template: any) => {
+  const loadTemplate = (template: any) => {
     setName(template.name || "");
     setLocation(template.location || "");
     setHoleCount(template.holeCount || 18);
 
-    if (template.suggestedPars && Array.isArray(template.suggestedPars) && template.suggestedPars.length > 0) {
+    if (template.suggestedPars && Array.isArray(template.suggestedPars)) {
       const newHoles: Hole[] = template.suggestedPars.map((par: number, index: number) => ({
         number: index + 1,
-        par: par,
+        par: Number(par) || 4,
       }));
       setHoles(newHoles);
+      console.log("✅ Loaded template pars for:", template.name, newHoles);
     } else {
-      // Fallback to all 4s
+      console.log("Using default pars");
       setHoles(Array.from({ length: template.holeCount || 18 }, (_, i) => ({
         number: i + 1,
         par: 4,
@@ -84,7 +85,9 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
               className="text-left p-4 rounded-2xl border border-[#2a5a48] hover:border-[#c5a36f] hover:bg-[#1f4a3a] transition-all"
             >
               <div className="font-medium">{template.name}</div>
-              <div className="text-xs text-[#c5a36f]/70">{template.location} • Par {template.suggestedPars?.reduce((a, b) => a + b, 0) || template.holeCount * 4}</div>
+              <div className="text-xs text-[#c5a36f]/70">
+                {template.location} • Par {template.suggestedPars?.reduce((a, b) => a + b, 0) || "—"}
+              </div>
             </button>
           ))}
         </div>
