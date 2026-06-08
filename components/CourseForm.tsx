@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Course, Hole, SUGGESTED_COURSE_TEMPLATES } from "@/lib/calculations";
 
 interface CourseFormProps {
@@ -24,12 +24,10 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     if (template.suggestedPars && Array.isArray(template.suggestedPars)) {
       const newHoles: Hole[] = template.suggestedPars.map((par: number, index: number) => ({
         number: index + 1,
-        par: Number(par) || 4,
+        par: Number(par),
       }));
       setHoles(newHoles);
-      console.log("✅ Loaded template pars for:", template.name, newHoles);
     } else {
-      console.log("Using default pars");
       setHoles(Array.from({ length: template.holeCount || 18 }, (_, i) => ({
         number: i + 1,
         par: 4,
@@ -47,7 +45,11 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    onSave({ name: name.trim(), location: location.trim(), holes });
+    onSave({ 
+      name: name.trim(), 
+      location: location.trim(), 
+      holes 
+    });
   };
 
   return (
@@ -73,7 +75,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
         />
       </div>
 
-      {/* Templates */}
+      {/* Quick Templates */}
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-2">Quick Start Templates</label>
         <div className="grid grid-cols-1 gap-2">
@@ -93,7 +95,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
         </div>
       </div>
 
-      {/* Hole Pars */}
+      {/* Hole Pars Editor */}
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-3">Adjust Hole Pars</label>
         <div className="grid grid-cols-6 gap-3 max-h-80 overflow-y-auto p-1">
