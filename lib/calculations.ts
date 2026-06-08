@@ -1,5 +1,6 @@
 import { Course, Hole, Player, Round, PlayerRoundScore, HoleScore } from "./types";
-
+// Re-export types and everything else needed by other files
+export type { Course, Hole, Player, Round, PlayerRoundScore, HoleScore } from "./types";
 // Simple, transparent handicap calculation
 // Formula used: average of (total score - total par) over all completed rounds for that player
 // Rounded to 1 decimal place. Can be negative for good players.

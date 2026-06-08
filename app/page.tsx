@@ -9,7 +9,7 @@ import {
   getTotalScoreForPlayerInRound,
   getScoreVsParForPlayerInRound,
   getCourseTotalPar,
-  generateDefaultHoles,
+    getPlayerHoleBreakdown,
 } from "@/lib/calculations";
 import { Modal } from "@/components/Modal";
 import { CourseForm } from "@/components/CourseForm";
