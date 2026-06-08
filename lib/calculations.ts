@@ -115,9 +115,7 @@ export const SUGGESTED_COURSE_TEMPLATES: CourseTemplate[] = [
     holeCount: 18,
     suggestedPars: [4,4,3,4,4,5,3,4,5,4,3,4,4,3,4,4,5,4] 
   },
-  { name: "Pinehurst No. 2", location: "Pinehurst, NC", holeCount: 18 },
-  { name: "Pebble Beach", location: "Pebble Beach, CA", holeCount: 18 },
-  { name: "Local 9-Hole Municipal", location: "Your Town", holeCount: 9 },
+  
 ];
 
 // Quick par total helper
