@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Course, Hole, SUGGESTED_COURSE_TEMPLATES } from "@/lib/calculations";
 
 interface CourseFormProps {
@@ -11,7 +11,6 @@ interface CourseFormProps {
 export function CourseForm({ onSave, onCancel }: CourseFormProps) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const [holeCount, setHoleCount] = useState(18);
   const [holes, setHoles] = useState<Hole[]>(
     Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }))
   );
@@ -19,19 +18,13 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
   const loadTemplate = (template: any) => {
     setName(template.name || "");
     setLocation(template.location || "");
-    setHoleCount(template.holeCount || 18);
 
     if (template.suggestedPars && Array.isArray(template.suggestedPars)) {
-      const newHoles: Hole[] = template.suggestedPars.map((par: number, index: number) => ({
+      const newHoles = template.suggestedPars.map((par: number, index: number) => ({
         number: index + 1,
         par: Number(par),
       }));
       setHoles(newHoles);
-    } else {
-      setHoles(Array.from({ length: template.holeCount || 18 }, (_, i) => ({
-        number: i + 1,
-        par: 4,
-      })));
     }
   };
 
@@ -56,26 +49,15 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-1">Course Name</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
-          required
-        />
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white" required />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-1">Location</label>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
-        />
+        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white" />
       </div>
 
-      {/* Quick Templates */}
+      {/* Templates */}
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-2">Quick Start Templates</label>
         <div className="grid grid-cols-1 gap-2">
@@ -95,9 +77,9 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
         </div>
       </div>
 
-      {/* Hole Pars Editor */}
+      {/* Hole Pars */}
       <div>
-        <label className="block text-sm font-medium text-[#c5a36f] mb-3">Adjust Hole Pars</label>
+        <label className="block text-sm font-medium text-[#c5a36f] mb-3">Hole Pars (adjust if needed)</label>
         <div className="grid grid-cols-6 gap-3 max-h-80 overflow-y-auto p-1">
           {holes.map((hole) => (
             <div key={hole.number} className="flex flex-col items-center">
@@ -116,17 +98,10 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
       </div>
 
       <div className="flex gap-3 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 py-3.5 rounded-2xl border border-[#2a5a48] font-semibold"
-        >
+        <button type="button" onClick={onCancel} className="flex-1 py-3.5 rounded-2xl border border-[#2a5a48] font-semibold">
           Cancel
         </button>
-        <button
-          type="submit"
-          className="flex-1 py-3.5 rounded-2xl bg-[#c5a36f] text-[#051b14] font-semibold hover:bg-white transition"
-        >
+        <button type="submit" className="flex-1 py-3.5 rounded-2xl bg-[#c5a36f] text-[#051b14] font-semibold hover:bg-white transition">
           Save Course
         </button>
       </div>
