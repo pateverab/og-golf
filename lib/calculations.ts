@@ -103,11 +103,18 @@ export interface CourseTemplate {
 }
 
 export const SUGGESTED_COURSE_TEMPLATES: CourseTemplate[] = [
+  { 
+    name: "Quito Tenis y Golf Club", 
+    location: "Quito, Ecuador", 
+    holeCount: 18 
+  },
+  { 
+    name: "Arrayanes Golf Course", 
+    location: "Quito, Ecuador", 
+    holeCount: 18 
+  },
   { name: "Pinehurst No. 2", location: "Pinehurst, NC", holeCount: 18 },
   { name: "Pebble Beach", location: "Pebble Beach, CA", holeCount: 18 },
-  { name: "Augusta National", location: "Augusta, GA", holeCount: 18 },
-  { name: "St. Andrews Old Course", location: "St. Andrews, Scotland", holeCount: 18 },
-  { name: "TPC Sawgrass", location: "Ponte Vedra Beach, FL", holeCount: 18 },
   { name: "Local 9-Hole Municipal", location: "Your Town", holeCount: 9 },
 ];
 
