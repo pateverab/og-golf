@@ -15,21 +15,23 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }))
   );
 
-  const loadFullTemplate = (template: any) => {
-    setName(template.name);
-    setLocation(template.location);
+  const loadTemplate = (template: any) => {
+    setName(template.name || "");
+    setLocation(template.location || "");
 
-    if (template.suggestedPars) {
-      const newHoles = template.suggestedPars.map((par: number, i: number) => ({
-        number: i + 1,
-        par: Number(par)
-      }));
-      setHoles(newHoles);
-    }
+    // This is the key - force update
+    const newHoles = (template.suggestedPars || Array(18).fill(4)).map((par: number, index: number) => ({
+      number: index + 1,
+      par: Number(par) || 4,
+    }));
+
+    setHoles(newHoles);
   };
 
   const updatePar = (holeNumber: number, newPar: number) => {
-    setHoles(prev => prev.map(h => h.number === holeNumber ? { ...h, par: newPar } : h));
+    setHoles(prev => prev.map(h => 
+      h.number === holeNumber ? { ...h, par: newPar } : h
+    ));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,32 +44,39 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-1">Course Name</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white" required />
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
+          required
+        />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-1">Location</label>
-        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white" />
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
+        />
       </div>
 
-      {/* Templates with Load Button */}
+      {/* Templates */}
       <div>
         <label className="block text-sm font-medium text-[#c5a36f] mb-2">Quick Start Templates</label>
-        <div className="space-y-3">
-          {SUGGESTED_COURSE_TEMPLATES.map((t, i) => (
-            <div key={i} className="flex gap-3 items-center p-4 border border-[#2a5a48] rounded-2xl">
-              <div className="flex-1">
-                <div className="font-medium">{t.name}</div>
-                <div className="text-xs text-[#c5a36f]/70">{t.location}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => loadFullTemplate(t)}
-                className="px-5 py-2 bg-[#c5a36f] text-[#051b14] rounded-xl font-medium hover:bg-white transition"
-              >
-                Load Pars
-              </button>
-            </div>
+        <div className="space-y-2">
+          {SUGGESTED_COURSE_TEMPLATES.map((template, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => loadTemplate(template)}
+              className="w-full text-left p-4 rounded-2xl border border-[#2a5a48] hover:border-[#c5a36f] hover:bg-[#1f4a3a] transition-all"
+            >
+              <div className="font-medium">{template.name}</div>
+              <div className="text-xs text-[#c5a36f]/70">{template.location}</div>
+            </button>
           ))}
         </div>
       </div>
@@ -79,11 +88,13 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
           {holes.map((hole) => (
             <div key={hole.number} className="text-center">
               <div className="text-xs text-[#c5a36f]/70 mb-1">H{hole.number}</div>
-              <input 
-                type="number" 
-                value={hole.par} 
+              <input
+                type="number"
+                value={hole.par}
                 onChange={(e) => updatePar(hole.number, parseInt(e.target.value) || 4)}
                 className="w-full text-center bg-[#0c3326] border border-[#2a5a48] rounded py-2 font-semibold"
+                min="3"
+                max="6"
               />
             </div>
           ))}
@@ -91,8 +102,19 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
       </div>
 
       <div className="flex gap-3 pt-4">
-        <button type="button" onClick={onCancel} className="flex-1 py-3 rounded-xl border border-[#2a5a48]">Cancel</button>
-        <button type="submit" className="flex-1 py-3 rounded-xl bg-[#c5a36f] text-black font-semibold">Save Course</button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-3 rounded-xl border border-[#2a5a48] font-semibold"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 py-3 rounded-xl bg-[#c5a36f] text-[#051b14] font-semibold"
+        >
+          Save Course
+        </button>
       </div>
     </form>
   );
