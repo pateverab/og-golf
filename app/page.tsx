@@ -349,6 +349,18 @@ export default function GolfScoreTracker() {
       </header>
 
       <div className="max-w-4xl mx-auto px-5 pt-6">
+                {/* Install on iPhone Button */}
+        <button
+          onClick={() => {
+            alert("📱 How to install OG Golf on your iPhone:\n\n" +
+                  "1. Tap the Share button (📤) at the bottom\n" +
+                  "2. Scroll down and tap 'Add to Home Screen'\n" +
+                  "3. Tap 'Add'");
+          }}
+          className="w-full mb-6 py-4 bg-[#c5a36f] hover:bg-white text-[#051b14] font-semibold rounded-3xl text-lg flex items-center justify-center gap-2 transition shadow-lg"
+        >
+          📱 Install OG Golf on iPhone
+        </button>
         {/* ========== ACTIVE ROUND SCREEN (Full focus) ========== */}
         {activeRound && currentCourseForActiveRound && (
           <div className="mb-8">
