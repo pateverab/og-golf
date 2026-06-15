@@ -29,6 +29,7 @@ import { PlayerForm } from "@/components/PlayerForm";
 import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PlayerStatsView } from "@/components/PlayerStatsView";
 export default function GolfScoreTracker() {
   // Core data
   const [courses, setCourses] = useState<Course[]>([]);
@@ -36,7 +37,7 @@ export default function GolfScoreTracker() {
   const [rounds, setRounds] = useState<Round[]>([]);
 
   // UI state
-  const [activeTab, setActiveTab] = useState<"home" | "rounds">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "rounds" | "stats">("home");
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [isStartRoundModalOpen, setIsStartRoundModalOpen] = useState(false);
@@ -405,6 +406,12 @@ export default function GolfScoreTracker() {
                 className={`px-4 py-1.5 rounded-full transition ${activeTab === "rounds" ? "bg-golf-gold text-golf-green-900 font-semibold" : "text-golf-gold hover:bg-golf-green-100 dark:hover:bg-[#153a2a]"}`}
               >
                 Rounds
+              </button>
+              <button
+                onClick={() => setActiveTab("stats")}
+                className={`px-4 py-1.5 rounded-full transition ${activeTab === "stats" ? "bg-golf-gold text-golf-green-900 font-semibold" : "text-golf-gold hover:bg-golf-green-100 dark:hover:bg-[#153a2a]"}`}
+              >
+                Stats
               </button>
             </div>
             <ThemeToggle />
@@ -801,6 +808,11 @@ export default function GolfScoreTracker() {
             </section>
 
           </>
+        )}
+
+        {/* ========== STATS VIEW ========== */}
+        {!activeRound && activeTab === "stats" && (
+          <PlayerStatsView players={players} rounds={rounds} courses={courses} />
         )}
 
         {/* ========== ROUNDS / HISTORY VIEW ========== */}

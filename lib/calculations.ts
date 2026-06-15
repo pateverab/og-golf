@@ -232,6 +232,132 @@ export interface HoleBreakdown {
   vsPar: number | null;
 }
 
+export interface HandicapHistoryPoint {
+  date: string;
+  handicap: number;
+  label: string;
+}
+
+export interface PlayerRoundResult {
+  roundId: string;
+  date: string;
+  courseName: string;
+  totalScore: number;
+  scoreVsPar: number;
+}
+
+export interface PlayerStats {
+  totalRounds: number;
+  averageScore: number;
+  bestRound: PlayerRoundResult | null;
+  worstRound: PlayerRoundResult | null;
+  handicapHistory: HandicapHistoryPoint[];
+}
+
+export function getPlayerCompletedRounds(
+  playerId: string,
+  completedRounds: Round[]
+): Round[] {
+  return completedRounds
+    .filter(
+      (round) =>
+        round.completed &&
+        round.playerScores.some(
+          (ps) => ps.playerId === playerId && ps.scores.length > 0
+        )
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function getHandicapHistoryForPlayer(
+  playerId: string,
+  completedRounds: Round[],
+  courses: Course[],
+  currentHandicap?: number
+): HandicapHistoryPoint[] {
+  const playerRounds = getPlayerCompletedRounds(playerId, completedRounds);
+
+  if (playerRounds.length === 0) {
+    if (currentHandicap === undefined) return [];
+    return [
+      {
+        date: new Date().toISOString(),
+        handicap: currentHandicap,
+        label: "Now",
+      },
+    ];
+  }
+
+  return playerRounds.map((round, index) => {
+    const roundsUpToNow = playerRounds.slice(0, index + 1);
+    const handicap = calculateHandicapForPlayer(playerId, roundsUpToNow, courses);
+    return {
+      date: round.date,
+      handicap,
+      label: new Date(round.date).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+    };
+  });
+}
+
+export function getPlayerStats(
+  player: Player,
+  completedRounds: Round[],
+  courses: Course[]
+): PlayerStats {
+  const playerRounds = getPlayerCompletedRounds(player.id, completedRounds);
+  const roundResults: PlayerRoundResult[] = [];
+
+  for (const round of playerRounds) {
+    const course = courses.find((c) => c.id === round.courseId);
+    if (!course) continue;
+
+    const playerScore = round.playerScores.find((ps) => ps.playerId === player.id);
+    if (!playerScore || playerScore.scores.length === 0) continue;
+
+    roundResults.push({
+      roundId: round.id,
+      date: round.date,
+      courseName: course.name,
+      totalScore: getTotalScoreForPlayerInRound(playerScore, course),
+      scoreVsPar: getScoreVsParForPlayerInRound(playerScore, course),
+    });
+  }
+
+  const totalRounds = roundResults.length;
+  const averageScore =
+    totalRounds > 0
+      ? Math.round(
+          (roundResults.reduce((sum, r) => sum + r.totalScore, 0) / totalRounds) * 10
+        ) / 10
+      : 0;
+
+  const bestRound =
+    roundResults.length > 0
+      ? roundResults.reduce((best, r) => (r.totalScore < best.totalScore ? r : best))
+      : null;
+
+  const worstRound =
+    roundResults.length > 0
+      ? roundResults.reduce((worst, r) => (r.totalScore > worst.totalScore ? r : worst))
+      : null;
+
+  return {
+    totalRounds,
+    averageScore,
+    bestRound,
+    worstRound,
+    handicapHistory: getHandicapHistoryForPlayer(
+      player.id,
+      completedRounds,
+      courses,
+      player.handicap
+    ),
+  };
+}
+
 export function getPlayerHoleBreakdown(
   playerScore: PlayerRoundScore,
   course: Course,
