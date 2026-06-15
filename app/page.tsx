@@ -883,7 +883,7 @@ export default function GolfScoreTracker() {
         )}
       </div>
 
-      {/* ========== START ROUND MODAL ========== */}
+         {/* ========== START ROUND MODAL ========== */}
       <Modal
         isOpen={isStartRoundModalOpen}
         onClose={() => setIsStartRoundModalOpen(false)}
@@ -912,122 +912,70 @@ export default function GolfScoreTracker() {
             )}
           </div>
 
-          {/* Round format options */}
-          {selectedCourseForStart && (() => {
-            const selectedCourse = courses.find((c) => c.id === selectedCourseForStart);
-            if (!selectedCourse) return null;
-            const courseIs18 = is18HoleCourse(selectedCourse);
-
-            return (
-              <div className="space-y-4">
-                {courseIs18 ? (
-                  <>
-                    <div>
-                      <div className="text-sm font-medium text-[#c5a36f] mb-2">Round Length</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setRoundLengthForStart(18)}
-                          className={`p-4 rounded-2xl border text-left transition ${
-                            roundLengthForStart === 18
-                              ? "border-[#c5a36f] bg-[#1f4a3a]"
-                              : "border-[#2a5a48]"
-                          }`}
-                        >
-                          <div className="font-medium">18 Holes</div>
-                          <div className="text-xs text-[#c5a36f]/70 mt-0.5">Full round</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRoundLengthForStart(9);
-                            setNineSideForStartRound(nineSideForStart);
-                          }}
-                          className={`p-4 rounded-2xl border text-left transition ${
-                            roundLengthForStart === 9
-                              ? "border-[#c5a36f] bg-[#1f4a3a]"
-                              : "border-[#2a5a48]"
-                          }`}
-                        >
-                          <div className="font-medium">9 Holes</div>
-                          <div className="text-xs text-[#c5a36f]/70 mt-0.5">Front or back nine</div>
-                        </button>
-                      </div>
-                    </div>
-
-                    {roundLengthForStart === 9 ? (
-                      <div>
-                        <div className="text-sm font-medium text-[#c5a36f] mb-2">Which Nine?</div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setNineSideForStartRound("front")}
-                            className={`p-4 rounded-2xl border text-left transition ${
-                              nineSideForStart === "front"
-                                ? "border-[#c5a36f] bg-[#1f4a3a]"
-                                : "border-[#2a5a48]"
-                            }`}
-                          >
-                            <div className="font-medium">Front 9</div>
-                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Holes 1–9</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setNineSideForStartRound("back")}
-                            className={`p-4 rounded-2xl border text-left transition ${
-                              nineSideForStart === "back"
-                                ? "border-[#c5a36f] bg-[#1f4a3a]"
-                                : "border-[#2a5a48]"
-                            }`}
-                          >
-                            <div className="font-medium">Back 9</div>
-                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Holes 10–18</div>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="text-sm font-medium text-[#c5a36f] mb-2">Starting Hole</div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setStartingHoleForStart(1)}
-                            className={`p-4 rounded-2xl border text-left transition ${
-                              startingHoleForStart === 1
-                                ? "border-[#c5a36f] bg-[#1f4a3a]"
-                                : "border-[#2a5a48]"
-                            }`}
-                          >
-                            <div className="font-medium">Hole 1</div>
-                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Front nine first</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setStartingHoleForStart(10)}
-                            className={`p-4 rounded-2xl border text-left transition ${
-                              startingHoleForStart === 10
-                                ? "border-[#c5a36f] bg-[#1f4a3a]"
-                                : "border-[#2a5a48]"
-                            }`}
-                          >
-                            <div className="font-medium">Hole 10</div>
-                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Back nine first</div>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="p-4 rounded-2xl border border-[#2a5a48] bg-[#153a2a]/50">
-                    <div className="text-sm font-medium text-[#c5a36f]">9-hole course</div>
-                    <div className="text-xs text-[#c5a36f]/70 mt-0.5">This course plays all 9 holes</div>
-                  </div>
-                )}
+          {/* Round Options */}
+          {selectedCourseForStart && (
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-[#c5a36f] mb-2">Round Length</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setRoundLengthForStart(18)}
+                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                  >
+                    <div className="font-medium">18 Holes</div>
+                  </button>
+                  <button 
+                    onClick={() => setRoundLengthForStart(9)}
+                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                  >
+                    <div className="font-medium">9 Holes</div>
+                  </button>
+                </div>
               </div>
-            );
-          })()}
 
-          {/* Choose Players (multi-select) */}
+              {roundLengthForStart === 9 && (
+                <div>
+                  <div className="text-sm font-medium text-[#c5a36f] mb-2">Which Nine?</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setNineSideForStartRound("front")}
+                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    >
+                      Front 9 (Holes 1-9)
+                    </button>
+                    <button 
+                      onClick={() => setNineSideForStartRound("back")}
+                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    >
+                      Back 9 (Holes 10-18)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {roundLengthForStart === 18 && (
+                <div>
+                  <div className="text-sm font-medium text-[#c5a36f] mb-2">Starting Hole</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setStartingHoleForStart(1)}
+                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    >
+                      Hole 1
+                    </button>
+                    <button 
+                      onClick={() => setStartingHoleForStart(10)}
+                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    >
+                      Hole 10
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Choose Players */}
           {selectedCourseForStart && (
             <div>
               <div className="text-sm font-medium text-[#c5a36f] mb-2">Select Players (at least one)</div>
