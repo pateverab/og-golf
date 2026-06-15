@@ -31,6 +31,7 @@ import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { LiveLeaderboard } from "@/components/LiveLeaderboard";
+import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
   getTestDataSuccessMessage,
   hasTestDataLoaded,
@@ -866,6 +867,14 @@ export default function GolfScoreTracker() {
                       );
                     })}
                   </div>
+
+                  {viewingRound.completed && (
+                    <RoundExportPanel
+                      round={viewingRound}
+                      course={viewingCourse}
+                      players={players}
+                    />
+                  )}
                 </div>
               </div>
             )}
