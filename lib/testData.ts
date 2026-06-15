@@ -14,6 +14,19 @@ const TEST_PLAYER_IDS = {
 
 const COURSE_PARS = [4, 4, 5, 3, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5];
 
+// 5 group rounds — each player appears in every round with varied vs-par scores
+const ROUND_SCHEDULE: Array<{
+  id: string;
+  daysAgo: number;
+  vsPar: Record<keyof typeof TEST_PLAYER_IDS, number>;
+}> = [
+  { id: "01", daysAgo: 42, vsPar: { maria: 2, pat: 11, carlos: 10, alex: 18 } },
+  { id: "02", daysAgo: 33, vsPar: { maria: 1, pat: 9, carlos: 11, alex: 17 } },
+  { id: "03", daysAgo: 24, vsPar: { maria: 0, pat: 8, carlos: 9, alex: 16 } },
+  { id: "04", daysAgo: 15, vsPar: { maria: -1, pat: 6, carlos: 8, alex: 14 } },
+  { id: "05", daysAgo: 6, vsPar: { maria: 0, pat: 5, carlos: 7, alex: 12 } },
+];
+
 function buildHoles(pars: number[]): Hole[] {
   return pars.map((par, index) => ({ number: index + 1, par }));
 }
@@ -59,7 +72,7 @@ function createTestCourse(): Course {
     name: "Quito Tenis y Golf Club",
     location: "Quito, Ecuador",
     holes: buildHoles(COURSE_PARS),
-    createdAt: daysAgoIso(30),
+    createdAt: daysAgoIso(45),
   };
 }
 
@@ -67,61 +80,39 @@ function createTestPlayers(): Player[] {
   const updatedAt = daysAgoIso(1);
 
   return [
-    {
-      id: TEST_PLAYER_IDS.pat,
-      name: "Patricio Aguilar",
-      nickname: "Pat",
-      handicap: 0,
-      updatedAt,
-    },
-    {
-      id: TEST_PLAYER_IDS.carlos,
-      name: "Carlos Mendoza",
-      nickname: "Carl",
-      handicap: 0,
-      updatedAt,
-    },
-    {
-      id: TEST_PLAYER_IDS.maria,
-      name: "María López",
-      handicap: 0,
-      updatedAt,
-    },
-    {
-      id: TEST_PLAYER_IDS.alex,
-      name: "Alex Rivera",
-      nickname: "Riv",
-      handicap: 0,
-      updatedAt,
-    },
+    { id: TEST_PLAYER_IDS.pat, name: "Patricio Aguilar", nickname: "Pat", handicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.carlos, name: "Carlos Mendoza", nickname: "Carl", handicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.maria, name: "María López", handicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.alex, name: "Alex Rivera", nickname: "Riv", handicap: 0, updatedAt },
   ];
 }
 
-function createTestRound(course: Course): Round {
-  const date = daysAgoIso(3);
-  const participants: Array<{ playerId: string; vsPar: number; seed: number }> = [
-    { playerId: TEST_PLAYER_IDS.maria, vsPar: 1, seed: 301 },
-    { playerId: TEST_PLAYER_IDS.pat, vsPar: 6, seed: 302 },
-    { playerId: TEST_PLAYER_IDS.carlos, vsPar: 9, seed: 303 },
-    { playerId: TEST_PLAYER_IDS.alex, vsPar: 15, seed: 304 },
-  ];
+function createTestRounds(course: Course): Round[] {
+  const playerKeys = Object.keys(TEST_PLAYER_IDS) as Array<keyof typeof TEST_PLAYER_IDS>;
 
-  const playerScores: PlayerRoundScore[] = participants.map((participant) => ({
-    playerId: participant.playerId,
-    scores: buildScores(course.holes, participant.vsPar, participant.seed),
-  }));
+  return ROUND_SCHEDULE.map((schedule, roundIndex) => {
+    const date = daysAgoIso(schedule.daysAgo);
+    const playerScores: PlayerRoundScore[] = playerKeys.map((key, playerIndex) => ({
+      playerId: TEST_PLAYER_IDS[key],
+      scores: buildScores(
+        course.holes,
+        schedule.vsPar[key],
+        roundIndex * 100 + playerIndex + 1
+      ),
+    }));
 
-  return {
-    id: `${TEST_ID_PREFIX}round-01`,
-    courseId: course.id,
-    date,
-    playerScores,
-    completed: true,
-    createdAt: date,
-    roundLength: 18,
-    nineSide: "front",
-    startingHole: 1,
-  };
+    return {
+      id: `${TEST_ID_PREFIX}round-${schedule.id}`,
+      courseId: course.id,
+      date,
+      playerScores,
+      completed: true,
+      createdAt: date,
+      roundLength: 18 as const,
+      nineSide: "front" as const,
+      startingHole: 1 as const,
+    };
+  });
 }
 
 export function hasTestDataLoaded(players: Player[]): boolean {
@@ -129,7 +120,7 @@ export function hasTestDataLoaded(players: Player[]): boolean {
 }
 
 export function getTestDataSuccessMessage(): string {
-  return "Test data loaded! Added 4 players, 1 course, and 1 completed round. Tap Start New Round to try the Live Leaderboard.";
+  return "Test data loaded! Added 4 players, 1 course, and 5 completed rounds (5 per player). Check the Stats tab for handicap charts, or start a new round for the Live Leaderboard.";
 }
 
 export function mergeTestData(
@@ -153,11 +144,11 @@ export function mergeTestData(
 
   const testCourse = createTestCourse();
   const testPlayers = createTestPlayers();
-  const testRound = createTestRound(testCourse);
+  const testRounds = createTestRounds(testCourse);
 
   const courses = [...existingCourses, testCourse];
   const players = [...existingPlayers, ...testPlayers];
-  const rounds = [...existingRounds, testRound];
+  const rounds = [...existingRounds, ...testRounds];
   const completedRounds = rounds.filter((round) => round.completed);
   const updatedPlayers = recalculateAllHandicaps(players, completedRounds, courses);
 
