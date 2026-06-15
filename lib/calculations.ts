@@ -208,7 +208,7 @@ export const SUGGESTED_COURSE_TEMPLATES: CourseTemplate[] = [
   name: "Quito Tenis y Golf Club",
   location: "Quito, Ecuador",
   holeCount: 18,
-  suggestedPars: [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 5, 4, 3, 4, 4, 3, 5, 4]
+  suggestedPars: [4, 4, 5, 3, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5]
 },
   { 
     name: "Arrayanes Golf Course", 
