@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { Modal } from './Modal';
-import { getPlayerHoleBreakdown, getTotalScoreForPlayerInRound, getScoreVsParForPlayerInRound } from '@/lib/calculations';
+import {
+  getPlayerHoleBreakdown,
+  getTotalScoreForPlayerInRound,
+  getScoreVsParForPlayerInRound,
+  getRoundFormatLabel,
+} from '@/lib/calculations';
 import type { Player, Round, Course, PlayerRoundScore } from '@/lib/types';
 
 interface PlayerDetailModalProps {
@@ -24,9 +29,17 @@ export function PlayerDetailModal({
 }: PlayerDetailModalProps) {
   if (!isOpen || !player || !course || !playerScore) return null;
 
-  const breakdown = getPlayerHoleBreakdown(playerScore, course);
+  const roundConfig = round
+    ? {
+        roundLength: round.roundLength,
+        nineSide: round.nineSide,
+        startingHole: round.startingHole,
+      }
+    : undefined;
+  const breakdown = getPlayerHoleBreakdown(playerScore, course, roundConfig);
   const totalScore = getTotalScoreForPlayerInRound(playerScore, course);
   const vsPar = getScoreVsParForPlayerInRound(playerScore, course);
+  const formatLabel = getRoundFormatLabel(course, roundConfig);
 
   const getScoreColor = (vsPar: number | null) => {
     if (vsPar === null) return 'text-gray-400';
@@ -49,6 +62,8 @@ export function PlayerDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Round Details - ${player.name}`}>
       <div className="space-y-6">
+        <div className="text-sm text-gray-500">{formatLabel}</div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-gray-50 p-4 rounded-xl text-center">

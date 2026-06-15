@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Course, Player, Round, ActiveRound, PlayerRoundScore, HoleScore } from "@/lib/types";
+import {
+  Course,
+  Player,
+  Round,
+  ActiveRound,
+  PlayerRoundScore,
+  HoleScore,
+  NineSide,
+  RoundLength,
+} from "@/lib/types";
 import { getCourses, saveCourses, getPlayers, savePlayers, getRounds, saveRounds } from "@/lib/storage";
 import {
   calculateHandicapForPlayer,
@@ -9,6 +18,10 @@ import {
   getTotalScoreForPlayerInRound,
   getScoreVsParForPlayerInRound,
   getCourseTotalPar,
+  getDefaultRoundConfig,
+  getHolesInPlay,
+  getRoundFormatLabel,
+  is18HoleCourse,
 } from "@/lib/calculations";
 import { Modal } from "@/components/Modal";
 import { CourseForm } from "@/components/CourseForm";
@@ -28,6 +41,9 @@ export default function GolfScoreTracker() {
   const [isStartRoundModalOpen, setIsStartRoundModalOpen] = useState(false);
   const [selectedCourseForStart, setSelectedCourseForStart] = useState<string>("");
   const [selectedPlayersForStart, setSelectedPlayersForStart] = useState<string[]>([]);
+  const [roundLengthForStart, setRoundLengthForStart] = useState<RoundLength>(18);
+  const [nineSideForStart, setNineSideForStart] = useState<NineSide>("front");
+  const [startingHoleForStart, setStartingHoleForStart] = useState<1 | 10>(1);
 
   // Active round state
   const [activeRound, setActiveRound] = useState<ActiveRound | null>(null);
@@ -97,7 +113,26 @@ export default function GolfScoreTracker() {
   const openStartRoundModal = () => {
     setSelectedCourseForStart("");
     setSelectedPlayersForStart([]);
+    setRoundLengthForStart(18);
+    setNineSideForStart("front");
+    setStartingHoleForStart(1);
     setIsStartRoundModalOpen(true);
+  };
+
+  const selectCourseForStart = (courseId: string) => {
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
+
+    const defaults = getDefaultRoundConfig(course);
+    setSelectedCourseForStart(courseId);
+    setRoundLengthForStart(defaults.roundLength);
+    setNineSideForStart(defaults.nineSide);
+    setStartingHoleForStart(defaults.startingHole);
+  };
+
+  const setNineSideForStartRound = (side: NineSide) => {
+    setNineSideForStart(side);
+    setStartingHoleForStart(side === "back" ? 10 : 1);
   };
 
   const togglePlayerForRound = (playerId: string) => {
@@ -116,15 +151,25 @@ export default function GolfScoreTracker() {
       initialScores[pid] = [];
     });
 
+    const roundConfig = {
+      roundLength: roundLengthForStart,
+      nineSide: nineSideForStart,
+      startingHole: startingHoleForStart,
+    };
+    const holesInPlay = getHolesInPlay(course, roundConfig);
+
     const newActiveRound: ActiveRound = {
       courseId: selectedCourseForStart,
       playerIds: selectedPlayersForStart,
       scores: initialScores,
       startTime: new Date().toISOString(),
+      roundLength: roundLengthForStart,
+      nineSide: nineSideForStart,
+      startingHole: startingHoleForStart,
     };
 
     setActiveRound(newActiveRound);
-    setCurrentHole(1);
+    setCurrentHole(holesInPlay[0] ?? 1);
     setIsStartRoundModalOpen(false);
     setActiveTab("rounds"); // Switch to rounds view
   };
@@ -183,19 +228,22 @@ export default function GolfScoreTracker() {
   };
 
   // Helpers for live round totals (used in score entry for context)
+  const getActiveScoresForPlayer = (playerId: string) => {
+    if (!activeRound || !currentCourseForActiveRound) return [];
+    const holesInPlay = new Set(getHolesInPlay(currentCourseForActiveRound, activeRound));
+    return (activeRound.scores[playerId] || []).filter((s) => holesInPlay.has(s.holeNumber));
+  };
+
   const getActiveTotalForPlayer = (playerId: string): number => {
-    if (!activeRound) return 0;
-    return (activeRound.scores[playerId] || []).reduce((sum, s) => sum + s.score, 0);
+    return getActiveScoresForPlayer(playerId).reduce((sum, s) => sum + s.score, 0);
   };
 
   const getActiveVsParForPlayer = (playerId: string): number => {
-    if (!activeRound || !currentCourseForActiveRound) return 0;
-    let diff = 0;
-    (activeRound.scores[playerId] || []).forEach((s) => {
+    if (!currentCourseForActiveRound) return 0;
+    return getActiveScoresForPlayer(playerId).reduce((diff, s) => {
       const hole = currentCourseForActiveRound.holes.find((h) => h.number === s.holeNumber);
-      diff += s.score - (hole?.par ?? 4);
-    });
-    return diff;
+      return diff + (s.score - (hole?.par ?? 4));
+    }, 0);
   };
 
   const setScoreToPar = (playerId: string, holeNumber: number, par: number) => {
@@ -222,6 +270,9 @@ export default function GolfScoreTracker() {
       playerScores,
       completed: markComplete,
       createdAt: new Date().toISOString(),
+      roundLength: activeRound.roundLength,
+      nineSide: activeRound.nineSide,
+      startingHole: activeRound.startingHole,
     };
 
     // Save the round
@@ -310,6 +361,15 @@ export default function GolfScoreTracker() {
 
   // ==================== RENDER ====================
   const currentCourseForActiveRound = getCurrentCourse();
+  const activeHolesInPlay =
+    activeRound && currentCourseForActiveRound
+      ? getHolesInPlay(currentCourseForActiveRound, activeRound)
+      : [];
+  const activeHoleIndex = activeHolesInPlay.indexOf(currentHole);
+  const activeRoundFormatLabel =
+    activeRound && currentCourseForActiveRound
+      ? getRoundFormatLabel(currentCourseForActiveRound, activeRound)
+      : "";
 
   return (
     <div className="min-h-screen pb-20">
@@ -368,6 +428,7 @@ export default function GolfScoreTracker() {
               <div>
                 <div className="text-[#c5a36f] text-sm font-medium tracking-wider">IN PROGRESS</div>
                 <div className="text-3xl font-semibold">{currentCourseForActiveRound.name}</div>
+                <div className="text-sm text-[#c5a36f]/80 mt-1">{activeRoundFormatLabel}</div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => saveActiveRound(false)} className="golf-btn-secondary px-5 py-2.5 rounded-xl text-sm font-semibold">
@@ -384,7 +445,8 @@ export default function GolfScoreTracker() {
 
             {/* Hole Navigation - larger, clearer, faster to tap */}
             <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-3 -mx-1 px-1">
-              {currentCourseForActiveRound.holes.map((hole) => {
+              {activeHolesInPlay.map((holeNumber) => {
+                const hole = currentCourseForActiveRound.holes.find((h) => h.number === holeNumber)!;
                 const isActive = currentHole === hole.number;
                 const allPlayersHaveScore = activeRound.playerIds.every(
                   (pid) => getPlayerScoreOnHole(pid, hole.number) !== null
@@ -509,15 +571,23 @@ export default function GolfScoreTracker() {
               {/* MAXIMUM thumb-friendly navigation at the bottom - much bigger as requested */}
               <div className="mt-6 grid grid-cols-2 gap-4">
                 <button
-                  onClick={() => setCurrentHole(Math.max(1, currentHole - 1))}
-                  disabled={currentHole === 1}
+                  onClick={() => {
+                    if (activeHoleIndex > 0) {
+                      setCurrentHole(activeHolesInPlay[activeHoleIndex - 1]);
+                    }
+                  }}
+                  disabled={activeHoleIndex <= 0}
                   className="py-5 text-lg font-bold rounded-2xl border-2 border-[#2a5a48] text-[#c5a36f] active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
                   ← Previous Hole
                 </button>
                 <button
-                  onClick={() => setCurrentHole(Math.min(currentCourseForActiveRound.holes.length, currentHole + 1))}
-                  disabled={currentHole === currentCourseForActiveRound.holes.length}
+                  onClick={() => {
+                    if (activeHoleIndex >= 0 && activeHoleIndex < activeHolesInPlay.length - 1) {
+                      setCurrentHole(activeHolesInPlay[activeHoleIndex + 1]);
+                    }
+                  }}
+                  disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
                   className="py-5 text-lg font-bold rounded-2xl border-2 border-[#2a5a48] text-[#c5a36f] active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
                   Next Hole →
@@ -541,7 +611,7 @@ export default function GolfScoreTracker() {
                     {activeRound.playerIds
                       .map((pid) => {
                         const player = players.find((p) => p.id === pid)!;
-                        const scores = activeRound.scores[pid] || [];
+                        const scores = getActiveScoresForPlayer(pid);
                         const total = scores.reduce((sum, s) => sum + s.score, 0);
                         const vsPar = scores.reduce((sum, s) => {
                           const h = currentCourseForActiveRound.holes.find((hh) => hh.number === s.holeNumber);
@@ -747,6 +817,9 @@ export default function GolfScoreTracker() {
                 <div className="golf-card rounded-3xl p-6">
                   <div className="text-2xl font-semibold">{viewingCourse.name}</div>
                   <div className="text-[#c5a36f]">{new Date(viewingRound.date).toLocaleDateString()}</div>
+                  <div className="text-sm text-[#c5a36f]/70 mt-1">
+                    {getRoundFormatLabel(viewingCourse, viewingRound)}
+                  </div>
 
                   <div className="mt-6 space-y-5">
                     {viewingRound.playerScores.map((ps) => {
@@ -826,7 +899,7 @@ export default function GolfScoreTracker() {
                 {courses.map((course) => (
                   <button
                     key={course.id}
-                    onClick={() => setSelectedCourseForStart(course.id)}
+                    onClick={() => selectCourseForStart(course.id)}
                     className={`text-left p-4 rounded-2xl border transition ${selectedCourseForStart === course.id ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
                   >
                     <div className="font-medium">{course.name}</div>
@@ -838,6 +911,121 @@ export default function GolfScoreTracker() {
               <div className="text-[#c5a36f]/70">No courses available. Add one first from the Home screen.</div>
             )}
           </div>
+
+          {/* Round format options */}
+          {selectedCourseForStart && (() => {
+            const selectedCourse = courses.find((c) => c.id === selectedCourseForStart);
+            if (!selectedCourse) return null;
+            const courseIs18 = is18HoleCourse(selectedCourse);
+
+            return (
+              <div className="space-y-4">
+                {courseIs18 ? (
+                  <>
+                    <div>
+                      <div className="text-sm font-medium text-[#c5a36f] mb-2">Round Length</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setRoundLengthForStart(18)}
+                          className={`p-4 rounded-2xl border text-left transition ${
+                            roundLengthForStart === 18
+                              ? "border-[#c5a36f] bg-[#1f4a3a]"
+                              : "border-[#2a5a48]"
+                          }`}
+                        >
+                          <div className="font-medium">18 Holes</div>
+                          <div className="text-xs text-[#c5a36f]/70 mt-0.5">Full round</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRoundLengthForStart(9);
+                            setNineSideForStartRound(nineSideForStart);
+                          }}
+                          className={`p-4 rounded-2xl border text-left transition ${
+                            roundLengthForStart === 9
+                              ? "border-[#c5a36f] bg-[#1f4a3a]"
+                              : "border-[#2a5a48]"
+                          }`}
+                        >
+                          <div className="font-medium">9 Holes</div>
+                          <div className="text-xs text-[#c5a36f]/70 mt-0.5">Front or back nine</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {roundLengthForStart === 9 ? (
+                      <div>
+                        <div className="text-sm font-medium text-[#c5a36f] mb-2">Which Nine?</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setNineSideForStartRound("front")}
+                            className={`p-4 rounded-2xl border text-left transition ${
+                              nineSideForStart === "front"
+                                ? "border-[#c5a36f] bg-[#1f4a3a]"
+                                : "border-[#2a5a48]"
+                            }`}
+                          >
+                            <div className="font-medium">Front 9</div>
+                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Holes 1–9</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNineSideForStartRound("back")}
+                            className={`p-4 rounded-2xl border text-left transition ${
+                              nineSideForStart === "back"
+                                ? "border-[#c5a36f] bg-[#1f4a3a]"
+                                : "border-[#2a5a48]"
+                            }`}
+                          >
+                            <div className="font-medium">Back 9</div>
+                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Holes 10–18</div>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-sm font-medium text-[#c5a36f] mb-2">Starting Hole</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setStartingHoleForStart(1)}
+                            className={`p-4 rounded-2xl border text-left transition ${
+                              startingHoleForStart === 1
+                                ? "border-[#c5a36f] bg-[#1f4a3a]"
+                                : "border-[#2a5a48]"
+                            }`}
+                          >
+                            <div className="font-medium">Hole 1</div>
+                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Front nine first</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStartingHoleForStart(10)}
+                            className={`p-4 rounded-2xl border text-left transition ${
+                              startingHoleForStart === 10
+                                ? "border-[#c5a36f] bg-[#1f4a3a]"
+                                : "border-[#2a5a48]"
+                            }`}
+                          >
+                            <div className="font-medium">Hole 10</div>
+                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Back nine first</div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="p-4 rounded-2xl border border-[#2a5a48] bg-[#153a2a]/50">
+                    <div className="text-sm font-medium text-[#c5a36f]">9-hole course</div>
+                    <div className="text-xs text-[#c5a36f]/70 mt-0.5">This course plays all 9 holes</div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Choose Players (multi-select) */}
           {selectedCourseForStart && (

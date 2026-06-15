@@ -31,6 +31,15 @@ export interface PlayerRoundScore {
   scores: HoleScore[]; // One entry per hole played
 }
 
+export type NineSide = "front" | "back";
+export type RoundLength = 9 | 18;
+
+export interface RoundConfig {
+  roundLength: RoundLength;
+  nineSide: NineSide;
+  startingHole: 1 | 10;
+}
+
 export interface Round {
   id: string;
   courseId: string;
@@ -38,6 +47,9 @@ export interface Round {
   playerScores: PlayerRoundScore[];
   completed: boolean; // User can mark round as finished
   createdAt: string;
+  roundLength?: RoundLength;
+  nineSide?: NineSide;
+  startingHole?: 1 | 10;
 }
 
 // Helper type for the live round in progress (not yet saved)
@@ -46,6 +58,9 @@ export interface ActiveRound {
   playerIds: string[];
   scores: Record<string, HoleScore[]>; // playerId -> scores
   startTime: string;
+  roundLength: RoundLength;
+  nineSide: NineSide;
+  startingHole: 1 | 10;
 }
 
 // For past round display + calculations
