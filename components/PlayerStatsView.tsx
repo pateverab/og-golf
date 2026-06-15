@@ -19,6 +19,8 @@ interface PlayerStatsViewProps {
   players: Player[];
   rounds: Round[];
   courses: Course[];
+  onLoadTestData?: () => void;
+  testDataLoaded?: boolean;
 }
 
 function formatVsPar(vsPar: number): string {
@@ -26,7 +28,13 @@ function formatVsPar(vsPar: number): string {
   return vsPar > 0 ? `+${vsPar}` : String(vsPar);
 }
 
-export function PlayerStatsView({ players, rounds, courses }: PlayerStatsViewProps) {
+export function PlayerStatsView({
+  players,
+  rounds,
+  courses,
+  onLoadTestData,
+  testDataLoaded = false,
+}: PlayerStatsViewProps) {
   const sortedPlayers = useMemo(
     () => [...players].sort((a, b) => a.name.localeCompare(b.name)),
     [players]
@@ -72,19 +80,50 @@ export function PlayerStatsView({ players, rounds, courses }: PlayerStatsViewPro
 
   if (sortedPlayers.length === 0) {
     return (
-      <div className="golf-card rounded-3xl p-10 text-center text-[#c5a36f]/70">
-        Add players from the Home tab to see statistics.
+      <div>
+        <div className="mb-6 px-1">
+          <h2 className="text-2xl font-semibold">Player Statistics</h2>
+          <p className="text-sm text-[#c5a36f]/80 mt-1">
+            Track handicap trends and round performance over time.
+          </p>
+        </div>
+        <div className="golf-card rounded-3xl p-10 text-center">
+          <p className="text-[#c5a36f]/70 mb-6">
+            Add players from the Home tab, or load sample data to explore statistics and handicap charts.
+          </p>
+          {onLoadTestData && (
+            <button
+              type="button"
+              onClick={onLoadTestData}
+              disabled={testDataLoaded}
+              className="px-6 py-3 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {testDataLoaded ? "Test Data Loaded" : "Load Test Data"}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-6 px-1">
-        <h2 className="text-2xl font-semibold">Player Statistics</h2>
-        <p className="text-sm text-[#c5a36f]/80 mt-1">
-          Track handicap trends and round performance over time.
-        </p>
+      <div className="mb-6 px-1 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold">Player Statistics</h2>
+          <p className="text-sm text-[#c5a36f]/80 mt-1">
+            Track handicap trends and round performance over time.
+          </p>
+        </div>
+        {onLoadTestData && !testDataLoaded && (
+          <button
+            type="button"
+            onClick={onLoadTestData}
+            className="shrink-0 px-4 py-2 rounded-xl border border-[#c5a36f]/60 text-sm text-[#c5a36f] font-medium hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition"
+          >
+            Load Test Data
+          </button>
+        )}
       </div>
 
       {/* Player selector */}

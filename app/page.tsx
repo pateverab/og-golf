@@ -30,6 +30,11 @@ import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
+import {
+  getTestDataSummary,
+  hasTestDataLoaded,
+  mergeTestData,
+} from "@/lib/testData";
 export default function GolfScoreTracker() {
   // Core data
   const [courses, setCourses] = useState<Course[]>([]);
@@ -323,6 +328,28 @@ export default function GolfScoreTracker() {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  const handleLoadTestData = () => {
+    if (activeRound) return;
+
+    if (hasTestDataLoaded(players)) {
+      alert("Test data is already loaded.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Load sample data?\n\nThis will add ${getTestDataSummary()} to your existing data. Nothing will be removed.`
+    );
+    if (!confirmed) return;
+
+    const result = mergeTestData(courses, players, rounds);
+    if (!result.added) return;
+
+    setCourses(result.courses);
+    setPlayers(result.players);
+    setRounds(result.rounds);
+    setActiveTab("stats");
   };
 
   const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -783,6 +810,15 @@ export default function GolfScoreTracker() {
                 <div className="text-sm text-[#c5a36f]/80">
                   Save all your courses, players, and rounds as a backup file.
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleLoadTestData}
+                  disabled={!!activeRound || hasTestDataLoaded(players)}
+                  className="w-full py-4 rounded-2xl border border-dashed border-[#c5a36f]/50 text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {hasTestDataLoaded(players) ? "Test Data Loaded" : "Load Test Data"}
+                </button>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
@@ -812,7 +848,13 @@ export default function GolfScoreTracker() {
 
         {/* ========== STATS VIEW ========== */}
         {!activeRound && activeTab === "stats" && (
-          <PlayerStatsView players={players} rounds={rounds} courses={courses} />
+          <PlayerStatsView
+            players={players}
+            rounds={rounds}
+            courses={courses}
+            onLoadTestData={handleLoadTestData}
+            testDataLoaded={hasTestDataLoaded(players)}
+          />
         )}
 
         {/* ========== ROUNDS / HISTORY VIEW ========== */}
