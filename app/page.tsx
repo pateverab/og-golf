@@ -30,8 +30,9 @@ import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
+import { LiveLeaderboard } from "@/components/LiveLeaderboard";
 import {
-  getTestDataSummary,
+  getTestDataSuccessMessage,
   hasTestDataLoaded,
   mergeTestData,
 } from "@/lib/testData";
@@ -338,18 +339,13 @@ export default function GolfScoreTracker() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Load sample data?\n\nThis will add ${getTestDataSummary()} to your existing data. Nothing will be removed.`
-    );
-    if (!confirmed) return;
-
     const result = mergeTestData(courses, players, rounds);
     if (!result.added) return;
 
     setCourses(result.courses);
     setPlayers(result.players);
     setRounds(result.rounds);
-    setActiveTab("stats");
+    alert(`✅ ${getTestDataSuccessMessage()}`);
   };
 
   const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,6 +504,14 @@ export default function GolfScoreTracker() {
               })}
             </div>
 
+            <LiveLeaderboard
+              playerIds={activeRound.playerIds}
+              players={players}
+              course={currentCourseForActiveRound}
+              scores={activeRound.scores}
+              roundConfig={activeRound}
+            />
+
             {/* Score Entry - Optimized for speed on the course */}
             <div className="golf-card rounded-3xl p-5">
               {/* Stronger current hole header */}
@@ -630,49 +634,6 @@ export default function GolfScoreTracker() {
                 >
                   Next Hole →
                 </button>
-              </div>
-            </div>
-
-            {/* LIVE LEADERBOARD */}
-            <div className="mt-6">
-              <div className="uppercase tracking-[1.5px] text-xs font-semibold text-[#c5a36f] mb-2 px-1">Live Leaderboard</div>
-              <div className="golf-card rounded-3xl overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-xs text-[#c5a36f] border-b border-golf-green-200 dark:border-[#0f3d24]">
-                      <th className="py-3 px-5 font-medium">Player</th>
-                      <th className="py-3 px-2 font-medium text-center">Total</th>
-                      <th className="py-3 px-5 font-medium text-right">vs Par</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-golf-green-100 dark:divide-[#0f3d24]/60 text-sm">
-                    {activeRound.playerIds
-                      .map((pid) => {
-                        const player = players.find((p) => p.id === pid)!;
-                        const scores = getActiveScoresForPlayer(pid);
-                        const total = scores.reduce((sum, s) => sum + s.score, 0);
-                        const vsPar = scores.reduce((sum, s) => {
-                          const h = currentCourseForActiveRound.holes.find((hh) => hh.number === s.holeNumber);
-                          return sum + (s.score - (h?.par ?? 4));
-                        }, 0);
-                        return { player, total, vsPar, holesPlayed: scores.length };
-                      })
-                      .sort((a, b) => a.vsPar - b.vsPar)
-                      .map((entry, index) => (
-                        <tr key={entry.player.id} className="leaderboard-row">
-                          <td className="py-3 px-5 font-medium flex items-center gap-2">
-                            {index === 0 && <span className="text-[#c5a36f]">★</span>}
-                            {entry.player.name}
-                          </td>
-                          <td className="py-3 px-2 text-center font-semibold tabular-nums">{entry.total || "—"}</td>
-                          <td className={`py-3 px-5 text-right font-semibold tabular-nums ${entry.vsPar < 0 ? "text-emerald-400" : entry.vsPar > 0 ? "text-red-400" : ""}`}>
-                            {entry.vsPar === 0 ? "E" : entry.vsPar > 0 ? `+${entry.vsPar}` : entry.vsPar}
-                            <span className="text-[10px] text-[#c5a36f]/50 ml-1">({entry.holesPlayed} holes)</span>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>

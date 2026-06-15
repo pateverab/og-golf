@@ -89,7 +89,7 @@ export function PlayerStatsView({
         </div>
         <div className="golf-card rounded-3xl p-10 text-center">
           <p className="text-[#c5a36f]/70 mb-6">
-            Add players from the Home tab, or load sample data to explore statistics and handicap charts.
+            Add players from the Home tab, or load sample data to explore stats, history, and the Live Leaderboard.
           </p>
           {onLoadTestData && (
             <button
