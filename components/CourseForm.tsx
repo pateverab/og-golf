@@ -48,7 +48,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
+          className="golf-input w-full rounded-xl px-4 py-3"
           required
         />
       </div>
@@ -59,7 +59,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="w-full bg-[#0c3326] border border-[#2a5a48] rounded-xl px-4 py-3 text-white"
+          className="golf-input w-full rounded-xl px-4 py-3"
         />
       </div>
 
@@ -72,7 +72,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
               key={index}
               type="button"
               onClick={() => loadTemplate(template)}
-              className="w-full text-left p-4 rounded-2xl border border-[#2a5a48] hover:border-[#c5a36f] hover:bg-[#1f4a3a] transition-all"
+              className="w-full text-left p-4 rounded-2xl border border-golf-green-100 dark:border-[#2a5a48] hover:border-golf-gold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition-all"
             >
               <div className="font-medium">{template.name}</div>
               <div className="text-xs text-[#c5a36f]/70">{template.location}</div>
@@ -92,7 +92,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
                 type="number"
                 value={hole.par}
                 onChange={(e) => updatePar(hole.number, parseInt(e.target.value) || 4)}
-                className="w-full text-center bg-[#0c3326] border border-[#2a5a48] rounded py-2 font-semibold"
+                className="golf-input w-full text-center rounded py-2 font-semibold"
                 min="3"
                 max="6"
               />
@@ -105,7 +105,7 @@ export function CourseForm({ onSave, onCancel }: CourseFormProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3 rounded-xl border border-[#2a5a48] font-semibold"
+          className="flex-1 py-3 rounded-xl border border-golf-green-100 dark:border-[#2a5a48] font-semibold"
         >
           Cancel
         </button>

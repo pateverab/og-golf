@@ -62,23 +62,22 @@ export function PlayerDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Round Details - ${player.name}`}>
       <div className="space-y-6">
-        <div className="text-sm text-gray-500">{formatLabel}</div>
+        <div className="text-sm text-gray-500 dark:text-golf-gold/70">{formatLabel}</div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-50 p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500">Total Score</div>
-            <div className="text-3xl font-bold text-gray-900">{totalScore}</div>
+          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
+            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Total Score</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-golf-cream">{totalScore}</div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500">Vs Par</div>
+          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
+            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Vs Par</div>
             <div className={`text-3xl font-bold ${vsPar >= 0 ? 'text-red-600' : 'text-emerald-600'}`}>
               {vsPar >= 0 ? '+' : ''}{vsPar}
             </div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500">Handicap</div>
-            <div className="text-3xl font-bold text-gray-900">{player.handicap}</div>
+          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
+            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Handicap</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-golf-cream">{player.handicap}</div>
           </div>
         </div>
 
@@ -88,7 +87,7 @@ export function PlayerDetailModal({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b">
+                <tr className="border-b border-gray-200 dark:border-[#2a5a48]">
                   <th className="py-2 text-left font-medium">Hole</th>
                   <th className="py-2 text-center font-medium">Par</th>
                   <th className="py-2 text-center font-medium">Score</th>
@@ -97,7 +96,7 @@ export function PlayerDetailModal({
               </thead>
               <tbody>
                 {breakdown.map((hole) => (
-                  <tr key={hole.holeNumber} className="border-b hover:bg-gray-50">
+                  <tr key={hole.holeNumber} className="border-b border-gray-200 dark:border-[#2a5a48] hover:bg-gray-50 dark:hover:bg-[#153a2a]/50">
                     <td className="py-3 font-medium">#{hole.holeNumber}</td>
                     <td className="py-3 text-center">{hole.par}</td>
                     <td className="py-3 text-center font-semibold">
@@ -121,7 +120,7 @@ export function PlayerDetailModal({
       <div className="mt-6 flex justify-end">
         <button
           onClick={onClose}
-          className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors"
+          className="golf-btn px-6 py-2 rounded-lg"
         >
           Close
         </button>

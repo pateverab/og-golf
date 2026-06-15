@@ -28,6 +28,7 @@ import { CourseForm } from "@/components/CourseForm";
 import { PlayerForm } from "@/components/PlayerForm";
 import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 export default function GolfScoreTracker() {
   // Core data
   const [courses, setCourses] = useState<Course[]>([]);
@@ -374,36 +375,39 @@ export default function GolfScoreTracker() {
   return (
     <div className="min-h-screen pb-20">
       {/* Top Navigation / Header */}
-      <header className="sticky top-0 z-40 bg-[#0c3326]/95 backdrop-blur border-b border-[#1a4a2f]">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c3326]/95 backdrop-blur border-b border-golf-green-100 dark:border-[#1a4a2f]">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#c5a36f] flex items-center justify-center">
-              <span className="text-[#051b14] text-xl font-bold">⛳</span>
+            <div className="w-9 h-9 rounded-full bg-golf-gold flex items-center justify-center">
+              <span className="text-golf-green-900 text-xl font-bold">⛳</span>
             </div>
             <div>
               <div className="font-semibold text-2xl tracking-tight">OG Golf</div>
-              <div className="text-[10px] text-[#c5a36f]/70 -mt-1">PRIVATE • FAST • SIMPLE</div>
+              <div className="text-[10px] text-golf-gold/70 -mt-1">PRIVATE • FAST • SIMPLE</div>
             </div>
           </div>
 
-          <div className="saved-indicator">
+          <div className="saved-indicator hidden sm:inline-flex">
             <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
             Saved locally
           </div>
 
-          <div className="flex gap-1 text-sm">
-            <button
-              onClick={() => setActiveTab("home")}
-              className={`px-4 py-1.5 rounded-full transition ${activeTab === "home" ? "bg-[#c5a36f] text-[#051b14] font-semibold" : "text-[#c5a36f] hover:bg-[#153a2a]"}`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setActiveTab("rounds")}
-              className={`px-4 py-1.5 rounded-full transition ${activeTab === "rounds" ? "bg-[#c5a36f] text-[#051b14] font-semibold" : "text-[#c5a36f] hover:bg-[#153a2a]"}`}
-            >
-              Rounds
-            </button>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1 text-sm">
+              <button
+                onClick={() => setActiveTab("home")}
+                className={`px-4 py-1.5 rounded-full transition ${activeTab === "home" ? "bg-golf-gold text-golf-green-900 font-semibold" : "text-golf-gold hover:bg-golf-green-100 dark:hover:bg-[#153a2a]"}`}
+              >
+                Home
+              </button>
+              <button
+                onClick={() => setActiveTab("rounds")}
+                className={`px-4 py-1.5 rounded-full transition ${activeTab === "rounds" ? "bg-golf-gold text-golf-green-900 font-semibold" : "text-golf-gold hover:bg-golf-green-100 dark:hover:bg-[#153a2a]"}`}
+              >
+                Rounds
+              </button>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -459,8 +463,8 @@ export default function GolfScoreTracker() {
                       isActive
                         ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f] shadow-lg"
                         : allPlayersHaveScore
-                        ? "bg-[#1f4a3a] border-[#c5a36f]/40 text-[#c5a36f]"
-                        : "bg-[#153a2a] border-[#2a5a48] text-[#f5f3eb]"
+                        ? "bg-white dark:bg-[#1f4a3a] border-[#c5a36f]/40 text-[#c5a36f]"
+                        : "bg-golf-green-100 dark:bg-[#153a2a] border-golf-green-100 dark:border-[#2a5a48] text-golf-green-900 dark:text-golf-cream"
                     }`}
                   >
                     <div>Hole {hole.number}</div>
@@ -478,7 +482,7 @@ export default function GolfScoreTracker() {
                   <div className="text-sm tracking-[1px] text-[#c5a36f]/70">CURRENT HOLE</div>
                   <div className="text-3xl font-semibold tabular-nums flex items-baseline gap-2 mt-0.5">
                     Hole {currentHole}
-                    <span className="inline-block text-base font-medium px-3 py-px rounded-full bg-[#1a4a2f] text-[#c5a36f]">
+                    <span className="inline-block text-base font-medium px-3 py-px rounded-full bg-golf-green-100 dark:bg-[#1a4a2f] text-[#c5a36f]">
                       Par {currentCourseForActiveRound.holes.find(h => h.number === currentHole)?.par}
                     </span>
                   </div>
@@ -498,7 +502,7 @@ export default function GolfScoreTracker() {
                   const roundVsPar = getActiveVsParForPlayer(playerId);
 
                   return (
-                    <div key={playerId} className="bg-[#0c3326] rounded-2xl p-5">
+                    <div key={playerId} className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
                       {/* Player header + round context */}
                       <div className="flex items-baseline justify-between mb-3 px-1">
                         <div>
@@ -549,7 +553,7 @@ export default function GolfScoreTracker() {
                         {/* Set to Par - extremely useful on the course */}
                         <button
                           onClick={() => setScoreToPar(playerId, currentHole, par)}
-                          className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
+                          className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
                         >
                           Set to Par
                         </button>
@@ -577,7 +581,7 @@ export default function GolfScoreTracker() {
                     }
                   }}
                   disabled={activeHoleIndex <= 0}
-                  className="py-5 text-lg font-bold rounded-2xl border-2 border-[#2a5a48] text-[#c5a36f] active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
+                  className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
                   ← Previous Hole
                 </button>
@@ -588,7 +592,7 @@ export default function GolfScoreTracker() {
                     }
                   }}
                   disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
-                  className="py-5 text-lg font-bold rounded-2xl border-2 border-[#2a5a48] text-[#c5a36f] active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
+                  className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
                   Next Hole →
                 </button>
@@ -601,13 +605,13 @@ export default function GolfScoreTracker() {
               <div className="golf-card rounded-3xl overflow-hidden">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-xs text-[#c5a36f] border-b border-[#0f3d24]">
+                    <tr className="text-left text-xs text-[#c5a36f] border-b border-golf-green-200 dark:border-[#0f3d24]">
                       <th className="py-3 px-5 font-medium">Player</th>
                       <th className="py-3 px-2 font-medium text-center">Total</th>
                       <th className="py-3 px-5 font-medium text-right">vs Par</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#0f3d24]/60 text-sm">
+                  <tbody className="divide-y divide-golf-green-100 dark:divide-[#0f3d24]/60 text-sm">
                     {activeRound.playerIds
                       .map((pid) => {
                         const player = players.find((p) => p.id === pid)!;
@@ -645,7 +649,7 @@ export default function GolfScoreTracker() {
           <>
             {/* Hero / Big CTA */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-[#153a2a] text-[#c5a36f] text-xs tracking-[2px] px-4 py-1 rounded-full mb-3">
+              <div className="inline-flex items-center gap-2 bg-golf-green-100 dark:bg-[#153a2a] text-[#c5a36f] text-xs tracking-[2px] px-4 py-1 rounded-full mb-3">
                 ON THE COURSE • NO ACCOUNTS • PRIVATE
               </div>
               <h1 className="text-4xl font-semibold tracking-tighter mb-2">Ready to play?</h1>
@@ -764,7 +768,7 @@ export default function GolfScoreTracker() {
                         </section>
 
             {/* ========== BACKUP & RESTORE ========== */}
-            <section className="mt-8 pt-6 border-t border-[#2a5a48]">
+            <section className="mt-8 pt-6 border-t border-golf-green-100 dark:border-[#2a5a48]">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-xl font-semibold">Backup & Restore</h2>
               </div>
@@ -776,7 +780,7 @@ export default function GolfScoreTracker() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={exportBackup}
-                    className="flex-1 py-4 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-[#1f4a3a] transition"
+                    className="flex-1 py-4 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition"
                   >
                     📤 Export Backup (JSON)
                   </button>
@@ -827,7 +831,7 @@ export default function GolfScoreTracker() {
                       const total = getTotalScoreForPlayerInRound(ps, viewingCourse);
                       const vsPar = getScoreVsParForPlayerInRound(ps, viewingCourse);
                       return (
-                        <div key={ps.playerId} className="bg-[#153a2a] rounded-2xl p-4">
+                        <div key={ps.playerId} className="bg-golf-green-100 dark:bg-[#153a2a] rounded-2xl p-4">
                           <div className="flex justify-between items-baseline">
                             <button
                           onClick={() => setPlayerDetailModal({ playerId: ps.playerId, roundId: viewingRound.id })}
@@ -900,7 +904,7 @@ export default function GolfScoreTracker() {
                   <button
                     key={course.id}
                     onClick={() => selectCourseForStart(course.id)}
-                    className={`text-left p-4 rounded-2xl border transition ${selectedCourseForStart === course.id ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    className={`text-left p-4 rounded-2xl border transition ${selectedCourseForStart === course.id ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                   >
                     <div className="font-medium">{course.name}</div>
                     <div className="text-xs text-[#c5a36f]/70">{course.location} • {course.holes.length} holes</div>
@@ -920,13 +924,13 @@ export default function GolfScoreTracker() {
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => setRoundLengthForStart(18)}
-                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                   >
                     <div className="font-medium">18 Holes</div>
                   </button>
                   <button 
                     onClick={() => setRoundLengthForStart(9)}
-                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                   >
                     <div className="font-medium">9 Holes</div>
                   </button>
@@ -939,13 +943,13 @@ export default function GolfScoreTracker() {
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => setNineSideForStartRound("front")}
-                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                     >
                       Front 9 (Holes 1-9)
                     </button>
                     <button 
                       onClick={() => setNineSideForStartRound("back")}
-                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                     >
                       Back 9 (Holes 10-18)
                     </button>
@@ -959,13 +963,13 @@ export default function GolfScoreTracker() {
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => setStartingHoleForStart(1)}
-                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                     >
                       Hole 1
                     </button>
                     <button 
                       onClick={() => setStartingHoleForStart(10)}
-                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                     >
                       Hole 10
                     </button>
@@ -984,13 +988,13 @@ export default function GolfScoreTracker() {
                   <button
                     key={player.id}
                     onClick={() => togglePlayerForRound(player.id)}
-                    className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition ${selectedPlayersForStart.includes(player.id) ? "border-[#c5a36f] bg-[#1f4a3a]" : "border-[#2a5a48]"}`}
+                    className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition ${selectedPlayersForStart.includes(player.id) ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
                   >
                     <div>
                       <div className="font-medium">{player.name}</div>
                       <div className="text-xs text-[#c5a36f]/70">Handicap {player.handicap}</div>
                     </div>
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${selectedPlayersForStart.includes(player.id) ? "bg-[#c5a36f] text-[#051b14]" : "border-[#0f3d24]"}`}>
+                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${selectedPlayersForStart.includes(player.id) ? "bg-[#c5a36f] text-[#051b14]" : "border-golf-green-200 dark:border-[#0f3d24]"}`}>
                       {selectedPlayersForStart.includes(player.id) && "✓"}
                     </div>
                   </button>
@@ -1000,7 +1004,7 @@ export default function GolfScoreTracker() {
           )}
 
           <div className="pt-2 flex gap-3">
-            <button onClick={() => setIsStartRoundModalOpen(false)} className="flex-1 py-3.5 rounded-2xl border border-[#0f3d24] font-semibold">
+            <button onClick={() => setIsStartRoundModalOpen(false)} className="flex-1 py-3.5 rounded-2xl border border-golf-green-200 dark:border-[#0f3d24] font-semibold">
               Cancel
             </button>
             <button

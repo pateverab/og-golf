@@ -72,7 +72,7 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3.5 rounded-xl border border-[#0f3d24] font-semibold"
+          className="flex-1 py-3.5 rounded-xl border border-golf-green-200 dark:border-[#0f3d24] font-semibold"
         >
           Cancel
         </button>
