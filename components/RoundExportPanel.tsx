@@ -8,8 +8,10 @@ import {
   captureScorecardImage,
   downloadBlob,
   generateRoundPdf,
+  generateRoundTextSummary,
   getRoundExportFilename,
   shareFile,
+  shareText,
 } from "@/lib/roundExport";
 import { RoundScorecard } from "./RoundScorecard";
 
@@ -19,7 +21,7 @@ interface RoundExportPanelProps {
   players: Player[];
 }
 
-type ExportAction = "pdf-download" | "pdf-share" | "image-share";
+type ExportAction = "pdf-download" | "pdf-share" | "image-share" | "text-share";
 
 export function RoundExportPanel({ round, course, players }: RoundExportPanelProps) {
   const scorecardRef = useRef<HTMLDivElement>(null);
@@ -51,13 +53,22 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
         return;
       }
 
-      if (!scorecardRef.current) {
-        throw new Error("Scorecard not ready");
+      if (action === "image-share") {
+        if (!scorecardRef.current) {
+          throw new Error("Scorecard not ready");
+        }
+        const blob = await captureScorecardImage(scorecardRef.current);
+        const result = await shareFile(blob, getRoundExportFilename(exportData, "png"), shareTitle);
+        if (result === "downloaded") {
+          alert("Sharing unavailable — image downloaded instead.");
+        }
+        return;
       }
-      const blob = await captureScorecardImage(scorecardRef.current);
-      const result = await shareFile(blob, getRoundExportFilename(exportData, "png"), shareTitle);
-      if (result === "downloaded") {
-        alert("Sharing unavailable — image downloaded instead.");
+
+      const summary = generateRoundTextSummary(exportData);
+      const result = await shareText(summary, shareTitle);
+      if (result === "copied") {
+        alert("Round summary copied! Paste it into WhatsApp or any chat.");
       }
     } catch (error) {
       console.error("Export failed:", error);
@@ -75,10 +86,10 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
       </div>
 
       <p className="text-sm text-[#c5a36f]/80 mb-4">
-        Download or share a professional scorecard with all player totals and hole-by-hole scores.
+        Download or share a scorecard — or send a text summary perfect for WhatsApp.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <button
           type="button"
           onClick={() => runExport("pdf-download")}
@@ -108,6 +119,15 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
           className="py-3.5 px-4 rounded-2xl border border-golf-green-200 dark:border-[#2a5a48] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50"
         >
           {loading === "image-share" ? "Capturing…" : "Share Image"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => runExport("text-share")}
+          disabled={loading !== null}
+          className="py-3.5 px-4 rounded-2xl border border-golf-green-200 dark:border-[#2a5a48] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50 col-span-2 sm:col-span-1"
+        >
+          {loading === "text-share" ? "Preparing…" : "Share Round Summary"}
         </button>
       </div>
 

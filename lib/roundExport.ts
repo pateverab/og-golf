@@ -88,6 +88,79 @@ export function buildRoundExportData(
   };
 }
 
+export function generateRoundTextSummary(data: RoundExportData): string {
+  const lines: string[] = [
+    "⛳ OG GOLF — ROUND SUMMARY",
+    "",
+    `📍 ${data.courseName}`,
+    `   ${data.courseLocation}`,
+    `📅 ${data.dateLabel}`,
+    `🏌️ ${data.formatLabel}`,
+    "",
+    "━━━━━━━━━━━━━━━━━━━━",
+    "LEADERBOARD",
+    "━━━━━━━━━━━━━━━━━━━━",
+  ];
+
+  data.players.forEach((player, index) => {
+    const rank = index + 1;
+    const medal = rank === 1 ? "🥇 " : rank === 2 ? "🥈 " : rank === 3 ? "🥉 " : `${rank}. `;
+    const label = player.nickname ? `${player.name} (${player.nickname})` : player.name;
+    lines.push(`${medal}${label} — ${player.total} (${formatVsPar(player.vsPar)})`);
+  });
+
+  lines.push("", "━━━━━━━━━━━━━━━━━━━━", "SCORECARDS", "━━━━━━━━━━━━━━━━━━━━");
+
+  for (const player of data.players) {
+    const label = player.nickname ? `${player.name} (${player.nickname})` : player.name;
+    lines.push("", `${label} — ${player.total} (${formatVsPar(player.vsPar)})`);
+
+    const is18 = player.holes.length > 9;
+    if (is18) {
+      const front = player.holes.filter((h) => h.number <= 9);
+      const back = player.holes.filter((h) => h.number > 9);
+      const fmt = (holes: typeof front) =>
+        holes.map((h) => (h.score !== null ? String(h.score) : "—")).join("·");
+
+      lines.push(`Front 9: ${player.frontTotal}  |  Back 9: ${player.backTotal}`);
+      lines.push(`  ${fmt(front)}`);
+      lines.push(`  ${fmt(back)}`);
+    } else {
+      for (const hole of player.holes) {
+        const score = hole.score !== null ? String(hole.score) : "—";
+        const vs = hole.vsPar !== null ? formatVsPar(hole.vsPar) : "—";
+        lines.push(`  #${hole.number}  Par ${hole.par}  →  ${score} (${vs})`);
+      }
+    }
+  }
+
+  lines.push("", "— Tracked with OG Golf");
+  return lines.join("\n");
+}
+
+export async function shareText(
+  text: string,
+  title: string
+): Promise<"shared" | "copied"> {
+  if (typeof navigator !== "undefined" && navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "shared";
+      }
+    }
+  }
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return "copied";
+  }
+
+  throw new Error("Sharing and clipboard are unavailable");
+}
+
 export function getRoundExportFilename(data: RoundExportData, extension: string): string {
   const datePart = data.dateLabel.replace(/,/g, "").split(" ").slice(-3).join("-");
   return `og-golf-${slugify(data.courseName)}-${slugify(datePart)}.${extension}`;
