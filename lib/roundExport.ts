@@ -138,27 +138,11 @@ export function generateRoundTextSummary(data: RoundExportData): string {
   return lines.join("\n");
 }
 
-export async function shareText(
-  text: string,
-  title: string
-): Promise<"shared" | "copied"> {
-  if (typeof navigator !== "undefined" && navigator.share) {
-    try {
-      await navigator.share({ title, text });
-      return "shared";
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return "shared";
-      }
-    }
+export async function copyTextToClipboard(text: string): Promise<void> {
+  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+    throw new Error("Clipboard is unavailable");
   }
-
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return "copied";
-  }
-
-  throw new Error("Sharing and clipboard are unavailable");
+  await navigator.clipboard.writeText(text);
 }
 
 export function getRoundExportFilename(data: RoundExportData, extension: string): string {

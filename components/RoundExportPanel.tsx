@@ -7,10 +7,10 @@ import {
   captureScorecardImage,
   downloadBlob,
   generateRoundPdf,
+  copyTextToClipboard,
   generateRoundTextSummary,
   getRoundExportFilename,
   shareFile,
-  shareText,
 } from "@/lib/roundExport";
 import { RoundScorecard } from "./RoundScorecard";
 
@@ -69,13 +69,11 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
     setLoading("text-share");
     try {
       const summary = generateRoundTextSummary(exportData);
-      const result = await shareText(summary, shareTitle);
-      if (result === "copied") {
-        alert("Copied! Paste into WhatsApp or any chat.");
-      }
+      await copyTextToClipboard(summary);
+      alert("Copied to clipboard! Paste into WhatsApp or Messages.");
     } catch (error) {
-      console.error("Text share failed:", error);
-      alert("Could not share text. Please try again.");
+      console.error("Copy failed:", error);
+      alert("Could not copy to clipboard. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -112,7 +110,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
           disabled={loading !== null}
           className="mt-3 w-full py-2.5 text-sm text-[#c5a36f] font-medium hover:underline disabled:opacity-50"
         >
-          {loading === "text-share" ? "Preparing…" : "Share a Copy → WhatsApp text summary"}
+          {loading === "text-share" ? "Copying…" : "Share a Copy"}
         </button>
       )}
 
