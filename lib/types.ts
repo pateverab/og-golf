@@ -54,6 +54,7 @@ export interface Round {
 
 // Helper type for the live round in progress (not yet saved)
 export interface ActiveRound {
+  id: string; // Stable Round id for upserting incomplete drafts in golf_rounds
   courseId: string;
   playerIds: string[];
   scores: Record<string, HoleScore[]>; // playerId -> scores
