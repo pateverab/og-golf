@@ -5,8 +5,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "OG Golf",
   description: "OG Golf — Track. Improve. Own the Course. Fast, private golf score tracking.",
+  applicationName: "OG Golf",
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
