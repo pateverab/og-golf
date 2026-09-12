@@ -6,7 +6,7 @@ A clean, modern, mobile-friendly golf score tracking web application built with 
 
 All data is stored locally in your browser using localStorage. No accounts, no servers, no external access.
 
-## Features (v1)
+## Features
 
 - Add and manage golf courses (name, location, pars per hole)
 - Add, view, and delete players
@@ -15,6 +15,11 @@ All data is stored locally in your browser using localStorage. No accounts, no s
 - Fast per-hole score entry with large +/- buttons and number input
 - Live leaderboard during the round (total, vs par, position)
 - Complete round history with score summaries
+- Player stats with handicap trends over time
+- Round export: PDF download, image share, and text “Share a Copy”
+- Backup & restore via JSON (import confirms before overwrite)
+- PWA shell (installable on iPhone; Install CTA only on iOS Safari when not already installed)
+- Light/dark theme toggle
 - Premium dark green + gold golf-themed design
 - Fully responsive for phone use on the course
 
@@ -36,14 +41,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Data
 
-Everything lives in browser localStorage. Clearing your browser data will remove all courses, players, and rounds.
+Everything lives in browser localStorage. Clearing your browser data will remove all courses, players, and rounds. Use **Backup & Restore** to export or import a JSON backup.
 
 ## Future Ideas
 
 - Real course lookup via API (currently manual + suggested templates)
-- Round export (CSV / PDF)
-- Simple statistics dashboard
-- PWA support for offline use on the course
+- CSV export
+- Cloud sync / multi-device accounts
+- Deeper analytics (per-hole tendencies, course difficulty)
 
 Built for golfers who want fast, beautiful, private score tracking.
 

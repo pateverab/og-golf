@@ -25,7 +25,6 @@ type ExportAction = "pdf-download" | "image-share" | "text-share";
 export function RoundExportPanel({ round, course, players }: RoundExportPanelProps) {
   const scorecardRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<ExportAction | null>(null);
-  const [showShareCopy, setShowShareCopy] = useState(false);
 
   const exportData = useMemo(
     () => buildRoundExportData(round, course, players),
@@ -39,7 +38,6 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
     try {
       const blob = await generateRoundPdf(exportData);
       downloadBlob(blob, getRoundExportFilename(exportData, "pdf"));
-      setShowShareCopy(true);
     } catch (error) {
       console.error("PDF export failed:", error);
       alert("Export failed. Please try again.");
@@ -103,16 +101,14 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
         </button>
       </div>
 
-      {showShareCopy && (
-        <button
-          type="button"
-          onClick={handleShareCopy}
-          disabled={loading !== null}
-          className="mt-3 w-full py-2.5 text-sm text-[#c5a36f] font-medium hover:underline disabled:opacity-50"
-        >
-          {loading === "text-share" ? "Copying…" : "Share a Copy"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleShareCopy}
+        disabled={loading !== null}
+        className="mt-3 w-full py-2.5 text-sm text-[#c5a36f] font-medium hover:underline disabled:opacity-50"
+      >
+        {loading === "text-share" ? "Copying…" : "Share a Copy"}
+      </button>
 
       <div
         ref={scorecardRef}
