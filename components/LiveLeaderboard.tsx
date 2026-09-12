@@ -49,12 +49,15 @@ export function LiveLeaderboard({
       return { player, total, vsPar, holesPlayed: playerScores.length };
     }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
+    // Rank by vs-par (not raw stroke total) so mid-round standings stay fair.
+    // Tie-break: more holes played, then lower total.
     raw.sort((a, b) => {
       if (a.holesPlayed === 0 && b.holesPlayed === 0) return 0;
       if (a.holesPlayed === 0) return 1;
       if (b.holesPlayed === 0) return -1;
-      if (a.total !== b.total) return a.total - b.total;
-      return a.vsPar - b.vsPar;
+      if (a.vsPar !== b.vsPar) return a.vsPar - b.vsPar;
+      if (a.holesPlayed !== b.holesPlayed) return b.holesPlayed - a.holesPlayed;
+      return a.total - b.total;
     });
 
     const ranked: LeaderboardEntry[] = [];
@@ -68,7 +71,11 @@ export function LiveLeaderboard({
       let rank = i + 1;
       if (i > 0 && raw[i - 1].holesPlayed > 0) {
         const prev = raw[i - 1];
-        if (entry.total === prev.total && entry.vsPar === prev.vsPar) {
+        if (
+          entry.vsPar === prev.vsPar &&
+          entry.holesPlayed === prev.holesPlayed &&
+          entry.total === prev.total
+        ) {
           rank = ranked[i - 1].rank;
         }
       }
