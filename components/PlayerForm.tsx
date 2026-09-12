@@ -44,7 +44,7 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">Starting Handicap</label>
+        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">Starting OG Index</label>
         <div className="flex items-center gap-4">
           <input
             type="range"
@@ -65,7 +65,7 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
             />
           </div>
         </div>
-        <p className="text-xs text-[#c5a36f]/70 mt-1.5">This will be updated automatically after rounds.</p>
+        <p className="text-xs text-[#c5a36f]/70 mt-1.5">Kept until this player finishes ≥1 full round, then replaced by their OG index (not USGA).</p>
       </div>
 
       <div className="flex gap-3 pt-3">

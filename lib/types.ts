@@ -17,7 +17,7 @@ export interface Player {
   id: string;
   name: string;
   nickname?: string;
-  handicap: number; // Current calculated handicap (can be negative)
+  handicap: number; // OG index (simplified): starting until ≥1 completed round, then calculated (can be negative)
   updatedAt: string;
 }
 

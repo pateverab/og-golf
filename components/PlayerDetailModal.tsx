@@ -76,8 +76,9 @@ export function PlayerDetailModal({
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Handicap</div>
+            <div className="text-sm text-gray-500 dark:text-golf-gold/70">OG Index</div>
             <div className="text-3xl font-bold text-gray-900 dark:text-golf-cream">{player.handicap}</div>
+            <div className="text-[10px] text-gray-400 dark:text-golf-gold/50 mt-1">Not USGA</div>
           </div>
         </div>
 

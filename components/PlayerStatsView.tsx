@@ -84,7 +84,7 @@ export function PlayerStatsView({
         <div className="mb-6 px-1">
           <h2 className="text-2xl font-semibold">Player Statistics</h2>
           <p className="text-sm text-[#c5a36f]/80 mt-1">
-            Track handicap trends and round performance over time.
+            Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
         </div>
         <div className="golf-card rounded-3xl p-10 text-center">
@@ -112,7 +112,7 @@ export function PlayerStatsView({
         <div>
           <h2 className="text-2xl font-semibold">Player Statistics</h2>
           <p className="text-sm text-[#c5a36f]/80 mt-1">
-            Track handicap trends and round performance over time.
+            Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
         </div>
         {onLoadTestData && !testDataLoaded && (
@@ -185,9 +185,10 @@ export function PlayerStatsView({
           <div className="golf-card rounded-3xl p-6">
             <div className="flex items-baseline justify-between mb-4 px-1">
               <div>
-                <h3 className="text-lg font-semibold">Handicap History</h3>
+                <h3 className="text-lg font-semibold">OG Index History</h3>
                 <p className="text-xs text-[#c5a36f]/70 mt-0.5">
-                  Current: <span className="font-semibold text-[#c5a36f]">{selectedPlayer.handicap}</span>
+                  Current OG index: <span className="font-semibold text-[#c5a36f]">{selectedPlayer.handicap}</span>
+                  <span className="text-[#c5a36f]/50"> · not USGA</span>
                 </p>
               </div>
             </div>
@@ -222,7 +223,7 @@ export function PlayerStatsView({
                         fontSize: "13px",
                         color: chartColors.tooltipText,
                       }}
-                      formatter={(value) => [value ?? "—", "Handicap"]}
+                      formatter={(value) => [value ?? "—", "OG Index"]}
                       labelFormatter={(_, payload) => {
                         const point = payload?.[0]?.payload;
                         if (!point?.date) return "";
@@ -247,7 +248,7 @@ export function PlayerStatsView({
               </div>
             ) : (
               <div className="h-48 flex items-center justify-center text-[#c5a36f]/60 text-sm">
-                Complete a round to start tracking handicap history.
+                Complete a round to start tracking OG index history.
               </div>
             )}
           </div>
