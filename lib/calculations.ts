@@ -106,6 +106,22 @@ export function calculateHandicapForPlayer(
   return Math.round(average * 10) / 10;
 }
 
+/** Starting/fallback HCP used until the player has enough qualifying rounds. */
+export function getPlayerStartingHandicap(player: Player): number {
+  return player.startingHandicap ?? player.handicap;
+}
+
+/** True when the player still displays their starting HCP (no qualifying completed rounds yet). */
+export function playerUsesStartingHandicap(
+  playerId: string,
+  completedRounds: Round[],
+  courses: Course[]
+): boolean {
+  // Sentinel: if still on starting, calculateHandicapForPlayer returns the starting arg unchanged.
+  const sentinel = Number.MAX_SAFE_INTEGER;
+  return calculateHandicapForPlayer(playerId, completedRounds, courses, sentinel) === sentinel;
+}
+
 // Update each player's OG index from their own qualifying rounds; preserve starting if none yet.
 export function recalculateAllHandicaps(
   players: Player[],
@@ -118,7 +134,7 @@ export function recalculateAllHandicaps(
       player.id,
       completedRounds,
       courses,
-      player.handicap
+      getPlayerStartingHandicap(player)
     ),
     updatedAt: new Date().toISOString(),
   }));
