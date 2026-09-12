@@ -77,6 +77,9 @@ export default function GolfScoreTracker() {
   // Avoid wiping localStorage before the initial restore completes
   const [storageHydrated, setStorageHydrated] = useState(false);
 
+  // Install CTA: iOS Safari only, and only when not already installed (standalone)
+  const [showInstallButton, setShowInstallButton] = useState(false);
+
   // Load from localStorage on mount
   useEffect(() => {
     setCourses(getCourses());
@@ -92,6 +95,17 @@ export default function GolfScoreTracker() {
     }
 
     setStorageHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const nav = window.navigator as Navigator & { standalone?: boolean };
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      nav.standalone === true;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(nav.userAgent) ||
+      (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
+    setShowInstallButton(isIOS && !isStandalone);
   }, []);
 
   // Persist whenever data changes — including empty arrays so deletions stick
@@ -499,15 +513,24 @@ export default function GolfScoreTracker() {
     reader.onload = (event) => {
       try {
         const backup = JSON.parse(event.target?.result as string);
-        
+
+        const confirmed = window.confirm(
+          "Importing this backup will replace your current courses, players, and rounds. Continue?"
+        );
+        if (!confirmed) {
+          e.target.value = "";
+          return;
+        }
+
         if (backup.courses) setCourses(backup.courses);
         if (backup.players) setPlayers(backup.players);
         if (backup.rounds) setRounds(backup.rounds);
 
         alert("✅ Backup imported successfully!");
-        e.target.value = '';
+        e.target.value = "";
       } catch (err) {
         alert("❌ Invalid backup file");
+        e.target.value = "";
       }
     };
     reader.readAsText(file);
@@ -586,18 +609,20 @@ export default function GolfScoreTracker() {
       </header>
 
       <div className="max-w-4xl mx-auto px-5 pt-6">
-                {/* Install on iPhone Button */}
-        <button
-          onClick={() => {
-            alert("📱 How to install OG Golf on your iPhone:\n\n" +
-                  "1. Tap the Share button (📤) at the bottom\n" +
-                  "2. Scroll down and tap 'Add to Home Screen'\n" +
-                  "3. Tap 'Add'");
-          }}
-          className="w-full mb-6 py-4 bg-[#c5a36f] hover:bg-white text-[#051b14] font-semibold rounded-3xl text-lg flex items-center justify-center gap-2 transition shadow-lg"
-        >
-          📱 Install OG Golf on iPhone
-        </button>
+                {/* Install on iPhone — only when iOS Safari and not already standalone */}
+        {showInstallButton && (
+          <button
+            onClick={() => {
+              alert("📱 How to install OG Golf on your iPhone:\n\n" +
+                    "1. Tap the Share button (📤) at the bottom\n" +
+                    "2. Scroll down and tap 'Add to Home Screen'\n" +
+                    "3. Tap 'Add'");
+            }}
+            className="w-full mb-6 py-4 bg-[#c5a36f] hover:bg-white text-[#051b14] font-semibold rounded-3xl text-lg flex items-center justify-center gap-2 transition shadow-lg"
+          >
+            📱 Install OG Golf on iPhone
+          </button>
+        )}
         {/* ========== ACTIVE ROUND SCREEN (Full focus) ========== */}
         {activeRound && currentCourseForActiveRound && (
           <div className="mb-8">
