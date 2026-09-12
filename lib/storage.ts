@@ -1,10 +1,17 @@
-import { Course, Player, Round } from "./types";
+import { ActiveRound, Course, Player, Round } from "./types";
 
 const STORAGE_KEYS = {
   COURSES: "golf_courses",
   PLAYERS: "golf_players",
   ROUNDS: "golf_rounds",
+  ACTIVE_ROUND: "golf_active_round",
 } as const;
+
+/** Persisted shape for the in-progress round (survives refresh / Safari kill). */
+export interface StoredActiveRound {
+  round: ActiveRound;
+  currentHole: number;
+}
 
 // Safe localStorage helpers with proper error handling and typing
 
@@ -28,6 +35,17 @@ function safeSet<T>(key: string, value: T): boolean {
     return true;
   } catch (error) {
     console.warn(`Failed to write localStorage key "${key}":`, error);
+    return false;
+  }
+}
+
+function safeRemove(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.removeItem(key);
+    return true;
+  } catch (error) {
+    console.warn(`Failed to remove localStorage key "${key}":`, error);
     return false;
   }
 }
@@ -57,6 +75,19 @@ export function getRounds(): Round[] {
 
 export function saveRounds(rounds: Round[]): boolean {
   return safeSet(STORAGE_KEYS.ROUNDS, rounds);
+}
+
+// Active (in-progress) round
+export function getActiveRound(): StoredActiveRound | null {
+  return safeGet<StoredActiveRound | null>(STORAGE_KEYS.ACTIVE_ROUND, null);
+}
+
+export function saveActiveRound(data: StoredActiveRound): boolean {
+  return safeSet(STORAGE_KEYS.ACTIVE_ROUND, data);
+}
+
+export function clearActiveRound(): boolean {
+  return safeRemove(STORAGE_KEYS.ACTIVE_ROUND);
 }
 
 // Clear all data (useful for testing / reset)

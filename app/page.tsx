@@ -11,7 +11,17 @@ import {
   NineSide,
   RoundLength,
 } from "@/lib/types";
-import { getCourses, saveCourses, getPlayers, savePlayers, getRounds, saveRounds } from "@/lib/storage";
+import {
+  getCourses,
+  saveCourses,
+  getPlayers,
+  savePlayers,
+  getRounds,
+  saveRounds,
+  getActiveRound as getStoredActiveRound,
+  saveActiveRound as persistActiveRound,
+  clearActiveRound as clearStoredActiveRound,
+} from "@/lib/storage";
 import {
   calculateHandicapForPlayer,
   recalculateAllHandicaps,
@@ -64,11 +74,23 @@ export default function GolfScoreTracker() {
   // Player detail modal in round view
   const [playerDetailModal, setPlayerDetailModal] = useState<{ playerId: string; roundId: string } | null>(null);
 
+  // Avoid wiping localStorage before the initial restore completes
+  const [storageHydrated, setStorageHydrated] = useState(false);
+
   // Load from localStorage on mount
   useEffect(() => {
     setCourses(getCourses());
     setPlayers(getPlayers());
     setRounds(getRounds());
+
+    const stored = getStoredActiveRound();
+    if (stored?.round) {
+      setActiveRound(stored.round);
+      setCurrentHole(stored.currentHole || stored.round.startingHole || 1);
+      setActiveTab("rounds");
+    }
+
+    setStorageHydrated(true);
   }, []);
 
   // Persist whenever data changes
@@ -83,6 +105,27 @@ export default function GolfScoreTracker() {
   useEffect(() => {
     if (rounds.length > 0) saveRounds(rounds);
   }, [rounds]);
+
+  // Persist in-progress round (scores, hole nav) so refresh / Safari kill can restore it
+  useEffect(() => {
+    if (!storageHydrated) return;
+    if (activeRound) {
+      persistActiveRound({ round: activeRound, currentHole });
+    } else {
+      clearStoredActiveRound();
+    }
+  }, [activeRound, currentHole, storageHydrated]);
+
+  // Prefer beforeunload when a round is in progress (desktop; limited on iOS Safari)
+  useEffect(() => {
+    if (!activeRound) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [activeRound]);
 
   // ==================== COURSES ====================
   const handleAddCourse = (courseData: Omit<Course, "id" | "createdAt">) => {
@@ -168,6 +211,7 @@ export default function GolfScoreTracker() {
     const holesInPlay = getHolesInPlay(course, roundConfig);
 
     const newActiveRound: ActiveRound = {
+      id: generateId(),
       courseId: selectedCourseForStart,
       playerIds: selectedPlayersForStart,
       scores: initialScores,
@@ -259,7 +303,8 @@ export default function GolfScoreTracker() {
     updateScore(playerId, holeNumber, par);
   };
 
-  // Save current active round (can be partial)
+  // Save current active round (can be partial). Upserts by ActiveRound.id so
+  // "Save & Continue Later" updates one draft instead of spawning duplicates.
   const saveActiveRound = (markComplete: boolean) => {
     if (!activeRound) return;
 
@@ -272,20 +317,22 @@ export default function GolfScoreTracker() {
       scores: [...(activeRound.scores[pid] || [])],
     }));
 
-    const newRound: Round = {
-      id: generateId(),
+    const existing = rounds.find((r) => r.id === activeRound.id);
+    const savedRound: Round = {
+      id: activeRound.id,
       courseId: activeRound.courseId,
       date: activeRound.startTime,
       playerScores,
       completed: markComplete,
-      createdAt: new Date().toISOString(),
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
       roundLength: activeRound.roundLength,
       nineSide: activeRound.nineSide,
       startingHole: activeRound.startingHole,
     };
 
-    // Save the round
-    const updatedRounds = [...rounds, newRound];
+    const updatedRounds = existing
+      ? rounds.map((r) => (r.id === savedRound.id ? savedRound : r))
+      : [...rounds, savedRound];
     setRounds(updatedRounds);
 
     // If completing the round, recalculate handicaps for everyone involved
@@ -294,9 +341,10 @@ export default function GolfScoreTracker() {
       setPlayers(updatedPlayers);
     }
 
-    // Clear active round
+    // Clear active round (also clears golf_active_round via persist effect)
     setActiveRound(null);
     setCurrentHole(1);
+    clearStoredActiveRound();
     setActiveTab("home");
   };
 
@@ -304,8 +352,61 @@ export default function GolfScoreTracker() {
     if (confirm("Discard the current round? Unsaved scores will be lost.")) {
       setActiveRound(null);
       setCurrentHole(1);
+      clearStoredActiveRound();
       setActiveTab("home");
     }
+  };
+
+  // Resume an incomplete history round into the live scorer (same Round id)
+  const resumeIncompleteRound = (roundId: string) => {
+    if (activeRound) {
+      alert("Finish or save the current round before resuming another.");
+      return;
+    }
+
+    const round = rounds.find((r) => r.id === roundId);
+    if (!round || round.completed) return;
+
+    const course = courses.find((c) => c.id === round.courseId);
+    if (!course) {
+      alert("Course for this round is missing.");
+      return;
+    }
+
+    const defaults = getDefaultRoundConfig(course);
+    const roundConfig = {
+      roundLength: round.roundLength ?? defaults.roundLength,
+      nineSide: round.nineSide ?? defaults.nineSide,
+      startingHole: round.startingHole ?? defaults.startingHole,
+    };
+
+    const playerIds = round.playerScores.map((ps) => ps.playerId);
+    const scores: Record<string, HoleScore[]> = {};
+    round.playerScores.forEach((ps) => {
+      scores[ps.playerId] = [...ps.scores];
+    });
+
+    const resumed: ActiveRound = {
+      id: round.id,
+      courseId: round.courseId,
+      playerIds,
+      scores,
+      startTime: round.date,
+      roundLength: roundConfig.roundLength,
+      nineSide: roundConfig.nineSide,
+      startingHole: roundConfig.startingHole,
+    };
+
+    const holesInPlay = getHolesInPlay(course, resumed);
+    const firstUnscored =
+      holesInPlay.find((h) => !playerIds.every((pid) => (scores[pid] || []).some((s) => s.holeNumber === h))) ??
+      holesInPlay[holesInPlay.length - 1] ??
+      roundConfig.startingHole;
+
+    setActiveRound(resumed);
+    setCurrentHole(firstUnscored);
+    setViewingRoundId(null);
+    setActiveTab("rounds");
   };
 
   // ==================== VIEW PAST ROUND ====================
@@ -835,10 +936,23 @@ export default function GolfScoreTracker() {
               <div className="mb-8">
                 <button onClick={() => setViewingRoundId(null)} className="text-sm text-[#c5a36f] mb-3">← Back to list</button>
                 <div className="golf-card rounded-3xl p-6">
-                  <div className="text-2xl font-semibold">{viewingCourse.name}</div>
-                  <div className="text-[#c5a36f]">{new Date(viewingRound.date).toLocaleDateString()}</div>
-                  <div className="text-sm text-[#c5a36f]/70 mt-1">
-                    {getRoundFormatLabel(viewingCourse, viewingRound)}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-2xl font-semibold">{viewingCourse.name}</div>
+                      <div className="text-[#c5a36f]">{new Date(viewingRound.date).toLocaleDateString()}</div>
+                      <div className="text-sm text-[#c5a36f]/70 mt-1">
+                        {getRoundFormatLabel(viewingCourse, viewingRound)}
+                      </div>
+                    </div>
+                    {!viewingRound.completed && (
+                      <button
+                        type="button"
+                        onClick={() => resumeIncompleteRound(viewingRound.id)}
+                        className="golf-btn px-5 py-2.5 rounded-xl text-sm font-semibold"
+                      >
+                        Resume Round
+                      </button>
+                    )}
                   </div>
 
                   <div className="mt-6 space-y-5">
@@ -885,24 +999,46 @@ export default function GolfScoreTracker() {
                 {[...rounds].sort((a, b) => b.date.localeCompare(a.date)).map((round) => {
                   const c = courses.find((cc) => cc.id === round.courseId);
                   return (
-                    <button
-                      key={round.id}
-                      onClick={() => setViewingRoundId(round.id)}
-                      className="golf-card w-full text-left rounded-2xl p-5"
-                    >
-                      <div className="flex justify-between">
-                        <div>
-                          <div className="font-semibold">{c?.name}</div>
-                          <div className="text-xs text-[#c5a36f]/70 mt-0.5">{new Date(round.date).toLocaleDateString()}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-[#c5a36f]">{round.playerScores.length} players</div>
-                          <div className={`text-xs mt-0.5 ${round.completed ? "text-emerald-400" : "text-amber-400"}`}>
-                            {round.completed ? "Completed" : "In progress"}
+                    <div key={round.id} className="golf-card w-full text-left rounded-2xl p-5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          round.completed ? setViewingRoundId(round.id) : resumeIncompleteRound(round.id)
+                        }
+                        className="w-full text-left"
+                      >
+                        <div className="flex justify-between">
+                          <div>
+                            <div className="font-semibold">{c?.name}</div>
+                            <div className="text-xs text-[#c5a36f]/70 mt-0.5">{new Date(round.date).toLocaleDateString()}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-[#c5a36f]">{round.playerScores.length} players</div>
+                            <div className={`text-xs mt-0.5 ${round.completed ? "text-emerald-400" : "text-amber-400"}`}>
+                              {round.completed ? "Completed" : "In progress"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                      {!round.completed && (
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => resumeIncompleteRound(round.id)}
+                            className="golf-btn px-4 py-2 rounded-xl text-sm font-semibold"
+                          >
+                            Resume
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setViewingRoundId(round.id)}
+                            className="golf-btn-secondary px-4 py-2 rounded-xl text-sm font-semibold"
+                          >
+                            View
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
