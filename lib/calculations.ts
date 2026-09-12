@@ -23,32 +23,63 @@ export type {
   RoundLength,
   ActiveRound,
 } from "./types";
-// Simple, transparent handicap calculation
-// Formula used: average of (total score - total par) over all completed rounds for that player
-// Rounded to 1 decimal place. Can be negative for good players.
-// This is intentionally a simplified version (no course rating/slope) as requested for v1.
+// OG index (simplified) — not a USGA Handicap Index.
+// Average of score-vs-par differentials over completed full-in-play rounds.
+// Rounded to 1 decimal. Can be negative. No course rating / slope.
+
+/** Keep the player's starting value until they have this many qualifying completed rounds. */
+export const MIN_COMPLETED_ROUNDS_FOR_OG_INDEX = 1;
+
+/**
+ * Build an 18-hole-equivalent differential for averaging.
+ * 9-hole diffs are doubled so a Front-9 +4 is not treated as equal to an 18-hole +4.
+ */
+function toEighteenHoleEquivalentDifferential(
+  rawDifferential: number,
+  roundLength: RoundLength | undefined,
+  holesScored: number
+): number {
+  const isNine =
+    roundLength === 9 || (roundLength === undefined && holesScored > 0 && holesScored <= 9);
+  // Choice: always scale 9-hole rounds ×2 to an 18-hole equivalent before averaging.
+  return isNine ? rawDifferential * 2 : rawDifferential;
+}
+
+function playerHasFullInPlayScores(
+  playerScoreData: PlayerRoundScore,
+  course: Course,
+  round: Round
+): boolean {
+  if (playerScoreData.scores.length === 0) return false;
+  const holesInPlay = getHolesInPlay(course, {
+    roundLength: round.roundLength,
+    nineSide: round.nineSide,
+    startingHole: round.startingHole,
+  });
+  if (holesInPlay.length === 0) return false;
+  const scored = new Set(playerScoreData.scores.map((s) => s.holeNumber));
+  return holesInPlay.every((holeNumber) => scored.has(holeNumber));
+}
 
 export function calculateHandicapForPlayer(
   playerId: string,
   completedRounds: Round[],
-  courses: Course[]
+  courses: Course[],
+  /** Preserved until this player has enough completed rounds (default 0). */
+  startingHandicap: number = 0
 ): number {
-  const playerRounds = completedRounds.filter((round) =>
-    round.playerScores.some((ps) => ps.playerId === playerId) && round.completed
-  );
-
-  if (playerRounds.length === 0) {
-    return 0; // New players start at 0
-  }
-
   const differentials: number[] = [];
 
-  for (const round of playerRounds) {
+  for (const round of completedRounds) {
+    if (!round.completed) continue;
+
     const course = courses.find((c) => c.id === round.courseId);
     if (!course) continue;
 
     const playerScoreData = round.playerScores.find((ps) => ps.playerId === playerId);
-    if (!playerScoreData || playerScoreData.scores.length === 0) continue;
+    if (!playerScoreData) continue;
+    // Only finished full-in-play rounds count (finish gate already exists for new rounds).
+    if (!playerHasFullInPlayScores(playerScoreData, course, round)) continue;
 
     const totalScore = playerScoreData.scores.reduce((sum, s) => sum + s.score, 0);
     const totalPar = playerScoreData.scores.reduce((sum, s) => {
@@ -56,16 +87,26 @@ export function calculateHandicapForPlayer(
       return sum + (hole?.par ?? 4);
     }, 0);
 
-    differentials.push(totalScore - totalPar);
+    const rawDiff = totalScore - totalPar;
+    differentials.push(
+      toEighteenHoleEquivalentDifferential(
+        rawDiff,
+        round.roundLength,
+        playerScoreData.scores.length
+      )
+    );
   }
 
-  if (differentials.length === 0) return 0;
+  // Do not wipe starting HCP on first load / test-data merge / finish of someone else's round.
+  if (differentials.length < MIN_COMPLETED_ROUNDS_FOR_OG_INDEX) {
+    return startingHandicap;
+  }
 
   const average = differentials.reduce((a, b) => a + b, 0) / differentials.length;
   return Math.round(average * 10) / 10;
 }
 
-// Update all players' handicaps based on completed rounds
+// Update each player's OG index from their own qualifying rounds; preserve starting if none yet.
 export function recalculateAllHandicaps(
   players: Player[],
   completedRounds: Round[],
@@ -73,7 +114,12 @@ export function recalculateAllHandicaps(
 ): Player[] {
   return players.map((player) => ({
     ...player,
-    handicap: calculateHandicapForPlayer(player.id, completedRounds, courses),
+    handicap: calculateHandicapForPlayer(
+      player.id,
+      completedRounds,
+      courses,
+      player.handicap
+    ),
     updatedAt: new Date().toISOString(),
   }));
 }
@@ -290,7 +336,12 @@ export function getHandicapHistoryForPlayer(
 
   return playerRounds.map((round, index) => {
     const roundsUpToNow = playerRounds.slice(0, index + 1);
-    const handicap = calculateHandicapForPlayer(playerId, roundsUpToNow, courses);
+    const handicap = calculateHandicapForPlayer(
+      playerId,
+      roundsUpToNow,
+      courses,
+      currentHandicap ?? 0
+    );
     return {
       date: round.date,
       handicap,

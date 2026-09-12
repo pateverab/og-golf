@@ -344,7 +344,7 @@ export default function GolfScoreTracker() {
     const course = getCurrentCourse();
     if (!course) return;
 
-    // Gate Finish: do not mark completed (or count toward HCP) unless all holes are scored
+    // Gate Finish: do not mark completed (or count toward OG index) unless all holes are scored
     if (markComplete && !isActiveRoundFullyScored()) {
       const holesInPlay = getHolesInPlay(course, activeRound);
       const missing: string[] = [];
@@ -390,7 +390,7 @@ export default function GolfScoreTracker() {
       : [...rounds, savedRound];
     setRounds(updatedRounds);
 
-    // If completing the round, recalculate handicaps for everyone involved
+    // If completing the round, recalculate OG index (preserves starting HCP for players with 0 qualifying rounds)
     if (markComplete) {
       const updatedPlayers = recalculateAllHandicaps(players, updatedRounds, courses);
       setPlayers(updatedPlayers);
@@ -542,7 +542,7 @@ export default function GolfScoreTracker() {
   // Sorted courses (newest first)
   const sortedCourses = [...courses].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  // Sorted players by current handicap (best first)
+  // Sorted players by current OG index (best first)
   const sortedPlayers = [...players].sort((a, b) => a.handicap - b.handicap);
 
   // Recent completed rounds for homepage
@@ -816,7 +816,7 @@ export default function GolfScoreTracker() {
                 ON THE COURSE • NO ACCOUNTS • PRIVATE
               </div>
               <h1 className="text-4xl font-semibold tracking-tighter mb-2">Ready to play?</h1>
-              <p className="text-[#c5a36f]/80 max-w-xs mx-auto">Track scores fast. Watch your handicap improve.</p>
+              <p className="text-[#c5a36f]/80 max-w-xs mx-auto">Track scores fast. Watch your OG index improve.</p>
             </div>
 
             <button
@@ -878,7 +878,8 @@ export default function GolfScoreTracker() {
                         <div className="font-semibold text-[17px]">{player.name}</div>
                         {player.nickname && <div className="text-sm text-[#c5a36f] mt-0.5">“{player.nickname}”</div>}
                         <div className="mt-3 text-sm">
-                          Handicap: <span className="font-semibold text-[#c5a36f] text-base">{player.handicap}</span>
+                          OG Index: <span className="font-semibold text-[#c5a36f] text-base">{player.handicap}</span>
+                          <span className="block text-[10px] text-[#c5a36f]/50 mt-0.5">Simplified · not USGA</span>
                         </div>
                       </div>
                       <button onClick={() => handleDeletePlayer(player.id)} className="text-red-400/70 hover:text-red-400 text-xs mt-1">
@@ -888,7 +889,7 @@ export default function GolfScoreTracker() {
                   ))}
                 </div>
               ) : (
-                <div className="golf-card rounded-2xl p-8 text-center text-[#c5a36f]/70">Add players to start tracking rounds and handicaps.</div>
+                <div className="golf-card rounded-2xl p-8 text-center text-[#c5a36f]/70">Add players to start tracking rounds and OG index.</div>
               )}
             </section>
 
@@ -1218,7 +1219,7 @@ export default function GolfScoreTracker() {
                   >
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-xs text-[#c5a36f]/70">Handicap {player.handicap}</div>
+                      <div className="text-xs text-[#c5a36f]/70">OG Index {player.handicap} · not USGA</div>
                     </div>
                     <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${selectedPlayersForStart.includes(player.id) ? "bg-[#c5a36f] text-[#051b14]" : "border-golf-green-200 dark:border-[#0f3d24]"}`}>
                       {selectedPlayersForStart.includes(player.id) && "✓"}

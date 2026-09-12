@@ -120,7 +120,7 @@ export function hasTestDataLoaded(players: Player[]): boolean {
 }
 
 export function getTestDataSuccessMessage(): string {
-  return "Test data loaded! Added 4 players, 1 course, and 5 completed rounds (5 per player). Check the Stats tab for handicap charts, or start a new round for the Live Leaderboard.";
+  return "Test data loaded! Added 4 players, 1 course, and 5 completed rounds (5 per player). Check the Stats tab for OG index charts, or start a new round for the Live Leaderboard.";
 }
 
 export function mergeTestData(
