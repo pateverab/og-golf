@@ -83,6 +83,7 @@ export default function GolfScoreTracker() {
     setPlayers(getPlayers());
     setRounds(getRounds());
 
+
     const stored = getStoredActiveRound();
     if (stored?.round) {
       setActiveRound(stored.round);
@@ -93,18 +94,21 @@ export default function GolfScoreTracker() {
     setStorageHydrated(true);
   }, []);
 
-  // Persist whenever data changes
+  // Persist whenever data changes — including empty arrays so deletions stick
   useEffect(() => {
-    if (courses.length > 0) saveCourses(courses);
-  }, [courses]);
+    if (!storageHydrated) return;
+    saveCourses(courses);
+  }, [courses, storageHydrated]);
 
   useEffect(() => {
-    if (players.length > 0) savePlayers(players);
-  }, [players]);
+    if (!storageHydrated) return;
+    savePlayers(players);
+  }, [players, storageHydrated]);
 
   useEffect(() => {
-    if (rounds.length > 0) saveRounds(rounds);
-  }, [rounds]);
+    if (!storageHydrated) return;
+    saveRounds(rounds);
+  }, [rounds, storageHydrated]);
 
   // Persist in-progress round (scores, hole nav) so refresh / Safari kill can restore it
   useEffect(() => {
@@ -303,6 +307,21 @@ export default function GolfScoreTracker() {
     updateScore(playerId, holeNumber, par);
   };
 
+  // True when every player has a score for every hole in play
+  const isActiveRoundFullyScored = (): boolean => {
+    if (!activeRound) return false;
+    const course = getCurrentCourse();
+    if (!course) return false;
+
+    const holesInPlay = getHolesInPlay(course, activeRound);
+    return activeRound.playerIds.every((pid) => {
+      const playerScores = activeRound.scores[pid] || [];
+      return holesInPlay.every((holeNumber) =>
+        playerScores.some((s) => s.holeNumber === holeNumber)
+      );
+    });
+  };
+
   // Save current active round (can be partial). Upserts by ActiveRound.id so
   // "Save & Continue Later" updates one draft instead of spawning duplicates.
   const saveActiveRound = (markComplete: boolean) => {
@@ -310,6 +329,28 @@ export default function GolfScoreTracker() {
 
     const course = getCurrentCourse();
     if (!course) return;
+
+    // Gate Finish: do not mark completed (or count toward HCP) unless all holes are scored
+    if (markComplete && !isActiveRoundFullyScored()) {
+      const holesInPlay = getHolesInPlay(course, activeRound);
+      const missing: string[] = [];
+      for (const pid of activeRound.playerIds) {
+        const player = players.find((p) => p.id === pid);
+        const name = player?.name ?? "Player";
+        const scored = new Set((activeRound.scores[pid] || []).map((s) => s.holeNumber));
+        const missingHoles = holesInPlay.filter((h) => !scored.has(h));
+        if (missingHoles.length > 0) {
+          missing.push(`${name}: hole${missingHoles.length === 1 ? "" : "s"} ${missingHoles.join(", ")}`);
+        }
+      }
+      alert(
+        "Finish Round requires a score for every hole in play for every player.\n\n" +
+          "Missing scores:\n" +
+          missing.join("\n") +
+          "\n\nEnter the remaining scores, or use Save & Continue Later."
+      );
+      return;
+    }
 
     // Convert active round to saved round format
     const playerScores: PlayerRoundScore[] = activeRound.playerIds.map((pid) => ({
