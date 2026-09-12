@@ -80,10 +80,10 @@ function createTestPlayers(): Player[] {
   const updatedAt = daysAgoIso(1);
 
   return [
-    { id: TEST_PLAYER_IDS.pat, name: "Patricio Aguilar", nickname: "Pat", handicap: 0, updatedAt },
-    { id: TEST_PLAYER_IDS.carlos, name: "Carlos Mendoza", nickname: "Carl", handicap: 0, updatedAt },
-    { id: TEST_PLAYER_IDS.maria, name: "María López", handicap: 0, updatedAt },
-    { id: TEST_PLAYER_IDS.alex, name: "Alex Rivera", nickname: "Riv", handicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.pat, name: "Patricio Aguilar", nickname: "Pat", handicap: 0, startingHandicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.carlos, name: "Carlos Mendoza", nickname: "Carl", handicap: 0, startingHandicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.maria, name: "María López", handicap: 0, startingHandicap: 0, updatedAt },
+    { id: TEST_PLAYER_IDS.alex, name: "Alex Rivera", nickname: "Riv", handicap: 0, startingHandicap: 0, updatedAt },
   ];
 }
 

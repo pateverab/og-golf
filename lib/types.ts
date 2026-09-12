@@ -17,7 +17,10 @@ export interface Player {
   id: string;
   name: string;
   nickname?: string;
-  handicap: number; // OG index (simplified): starting until ≥1 completed round, then calculated (can be negative)
+  /** Current OG index shown in UI (starting until ≥1 qualifying round, then calculated). */
+  handicap: number;
+  /** Stored starting/fallback HCP; used when player has no qualifying completed rounds. */
+  startingHandicap?: number;
   updatedAt: string;
 }
 

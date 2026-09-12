@@ -32,6 +32,8 @@ import {
   getHolesInPlay,
   getRoundFormatLabel,
   is18HoleCourse,
+  normalizeRoundConfig,
+  playerUsesStartingHandicap,
 } from "@/lib/calculations";
 import { Modal } from "@/components/Modal";
 import { CourseForm } from "@/components/CourseForm";
@@ -57,6 +59,8 @@ export default function GolfScoreTracker() {
   const [activeTab, setActiveTab] = useState<"home" | "rounds" | "stats">("home");
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [isStartRoundModalOpen, setIsStartRoundModalOpen] = useState(false);
   const [selectedCourseForStart, setSelectedCourseForStart] = useState<string>("");
   const [selectedPlayersForStart, setSelectedPlayersForStart] = useState<string[]>([]);
@@ -146,14 +150,35 @@ export default function GolfScoreTracker() {
   }, [activeRound]);
 
   // ==================== COURSES ====================
-  const handleAddCourse = (courseData: Omit<Course, "id" | "createdAt">) => {
-    const newCourse: Course = {
-      ...courseData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    setCourses((prev) => [...prev, newCourse]);
+  const openAddCourseModal = () => {
+    setEditingCourseId(null);
+    setIsCourseModalOpen(true);
+  };
+
+  const openEditCourseModal = (courseId: string) => {
+    setEditingCourseId(courseId);
+    setIsCourseModalOpen(true);
+  };
+
+  const closeCourseModal = () => {
     setIsCourseModalOpen(false);
+    setEditingCourseId(null);
+  };
+
+  const handleSaveCourse = (courseData: Omit<Course, "id" | "createdAt">) => {
+    if (editingCourseId) {
+      setCourses((prev) =>
+        prev.map((c) => (c.id === editingCourseId ? { ...c, ...courseData } : c))
+      );
+    } else {
+      const newCourse: Course = {
+        ...courseData,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      };
+      setCourses((prev) => [...prev, newCourse]);
+    }
+    closeCourseModal();
   };
 
   const handleDeleteCourse = (courseId: string) => {
@@ -162,16 +187,54 @@ export default function GolfScoreTracker() {
   };
 
   // ==================== PLAYERS ====================
-  const handleAddPlayer = (name: string, nickname: string, startingHandicap: number) => {
-    const newPlayer: Player = {
-      id: generateId(),
-      name,
-      nickname: nickname || undefined,
-      handicap: startingHandicap,
-      updatedAt: new Date().toISOString(),
-    };
-    setPlayers((prev) => [...prev, newPlayer]);
+  const openAddPlayerModal = () => {
+    setEditingPlayerId(null);
+    setIsPlayerModalOpen(true);
+  };
+
+  const openEditPlayerModal = (playerId: string) => {
+    setEditingPlayerId(playerId);
+    setIsPlayerModalOpen(true);
+  };
+
+  const closePlayerModal = () => {
     setIsPlayerModalOpen(false);
+    setEditingPlayerId(null);
+  };
+
+  const handleSavePlayer = (name: string, nickname: string, startingHandicap: number) => {
+    if (editingPlayerId) {
+      setPlayers((prev) =>
+        prev.map((p) => {
+          if (p.id !== editingPlayerId) return p;
+          const updated: Player = {
+            ...p,
+            name,
+            nickname: nickname || undefined,
+            startingHandicap,
+            handicap: calculateHandicapForPlayer(
+              p.id,
+              rounds,
+              courses,
+              startingHandicap
+            ),
+            updatedAt: new Date().toISOString(),
+          };
+          return updated;
+        })
+      );
+    } else {
+      const newPlayer: Player = {
+        id: generateId(),
+        name,
+        nickname: nickname || undefined,
+        handicap: startingHandicap,
+        startingHandicap,
+        updatedAt: new Date().toISOString(),
+      };
+      setPlayers((prev) => [...prev, newPlayer]);
+    }
+    closePlayerModal();
   };
 
   const handleDeletePlayer = (playerId: string) => {
@@ -221,11 +284,11 @@ export default function GolfScoreTracker() {
       initialScores[pid] = [];
     });
 
-    const roundConfig = {
+    const roundConfig = normalizeRoundConfig(course, {
       roundLength: roundLengthForStart,
       nineSide: nineSideForStart,
       startingHole: startingHoleForStart,
-    };
+    });
     const holesInPlay = getHolesInPlay(course, roundConfig);
 
     const newActiveRound: ActiveRound = {
@@ -234,9 +297,9 @@ export default function GolfScoreTracker() {
       playerIds: selectedPlayersForStart,
       scores: initialScores,
       startTime: new Date().toISOString(),
-      roundLength: roundLengthForStart,
-      nineSide: nineSideForStart,
-      startingHole: startingHoleForStart,
+      roundLength: roundConfig.roundLength,
+      nineSide: roundConfig.nineSide,
+      startingHole: roundConfig.startingHole,
     };
 
     setActiveRound(newActiveRound);
@@ -833,7 +896,7 @@ export default function GolfScoreTracker() {
             <section className="mb-8">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-xl font-semibold">My Courses</h2>
-                <button onClick={() => setIsCourseModalOpen(true)} className="text-sm text-[#c5a36f] hover:underline">
+                <button onClick={openAddCourseModal} className="text-sm text-[#c5a36f] hover:underline">
                   + Add Course
                 </button>
               </div>
@@ -847,12 +910,20 @@ export default function GolfScoreTracker() {
                       <div className="mt-4 text-sm font-medium text-[#c5a36f]">
                         {course.holes.length} holes • Total Par {getCourseTotalPar(course)}
                       </div>
-                      <button
-                        onClick={() => handleDeleteCourse(course.id)}
-                        className="text-xs text-red-400/70 hover:text-red-400 mt-4"
-                      >
-                        Remove course
-                      </button>
+                      <div className="mt-4 flex items-center gap-4">
+                        <button
+                          onClick={() => openEditCourseModal(course.id)}
+                          className="text-xs text-[#c5a36f] hover:underline"
+                        >
+                          Edit course
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="text-xs text-red-400/70 hover:text-red-400"
+                        >
+                          Remove course
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -865,7 +936,7 @@ export default function GolfScoreTracker() {
             <section className="mb-8">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-xl font-semibold">My Players</h2>
-                <button onClick={() => setIsPlayerModalOpen(true)} className="text-sm text-[#c5a36f] hover:underline">
+                <button onClick={openAddPlayerModal} className="text-sm text-[#c5a36f] hover:underline">
                   + Add Player
                 </button>
               </div>
@@ -881,10 +952,21 @@ export default function GolfScoreTracker() {
                           OG Index: <span className="font-semibold text-[#c5a36f] text-base">{player.handicap}</span>
                           <span className="block text-[10px] text-[#c5a36f]/50 mt-0.5">Simplified · not USGA</span>
                         </div>
+                        <div className="mt-3 flex items-center gap-4">
+                          <button
+                            onClick={() => openEditPlayerModal(player.id)}
+                            className="text-xs text-[#c5a36f] hover:underline"
+                          >
+                            Edit player
+                          </button>
+                          <button
+                            onClick={() => handleDeletePlayer(player.id)}
+                            className="text-xs text-red-400/70 hover:text-red-400"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                      <button onClick={() => handleDeletePlayer(player.id)} className="text-red-400/70 hover:text-red-400 text-xs mt-1">
-                        Remove
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -1144,67 +1226,81 @@ export default function GolfScoreTracker() {
           </div>
 
           {/* Round Options */}
-          {selectedCourseForStart && (
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-[#c5a36f] mb-2">Round Length</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => setRoundLengthForStart(18)}
-                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                  >
-                    <div className="font-medium">18 Holes</div>
-                  </button>
-                  <button 
-                    onClick={() => setRoundLengthForStart(9)}
-                    className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                  >
-                    <div className="font-medium">9 Holes</div>
-                  </button>
+          {selectedCourseForStart && (() => {
+            const startCourse = courses.find((c) => c.id === selectedCourseForStart);
+            if (!startCourse) return null;
+            const courseIs18 = is18HoleCourse(startCourse);
+
+            if (!courseIs18) {
+              return (
+                <div className="rounded-2xl border border-golf-green-100 dark:border-[#2a5a48] p-4 text-sm text-[#c5a36f]">
+                  9-hole course — round plays all holes (1–9). Hole 10 and 18-hole options are not available.
                 </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm font-medium text-[#c5a36f] mb-2">Round Length</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setRoundLengthForStart(18)}
+                      className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                    >
+                      <div className="font-medium">18 Holes</div>
+                    </button>
+                    <button
+                      onClick={() => setRoundLengthForStart(9)}
+                      className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                    >
+                      <div className="font-medium">9 Holes</div>
+                    </button>
+                  </div>
+                </div>
+
+                {roundLengthForStart === 9 && (
+                  <div>
+                    <div className="text-sm font-medium text-[#c5a36f] mb-2">Which Nine?</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setNineSideForStartRound("front")}
+                        className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                      >
+                        Front 9 (Holes 1-9)
+                      </button>
+                      <button
+                        onClick={() => setNineSideForStartRound("back")}
+                        className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                      >
+                        Back 9 (Holes 10-18)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {roundLengthForStart === 18 && (
+                  <div>
+                    <div className="text-sm font-medium text-[#c5a36f] mb-2">Starting Hole</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setStartingHoleForStart(1)}
+                        className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                      >
+                        Hole 1
+                      </button>
+                      <button
+                        onClick={() => setStartingHoleForStart(10)}
+                        className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
+                      >
+                        Hole 10
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {roundLengthForStart === 9 && (
-                <div>
-                  <div className="text-sm font-medium text-[#c5a36f] mb-2">Which Nine?</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={() => setNineSideForStartRound("front")}
-                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                    >
-                      Front 9 (Holes 1-9)
-                    </button>
-                    <button 
-                      onClick={() => setNineSideForStartRound("back")}
-                      className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                    >
-                      Back 9 (Holes 10-18)
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {roundLengthForStart === 18 && (
-                <div>
-                  <div className="text-sm font-medium text-[#c5a36f] mb-2">Starting Hole</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={() => setStartingHoleForStart(1)}
-                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                    >
-                      Hole 1
-                    </button>
-                    <button 
-                      onClick={() => setStartingHoleForStart(10)}
-                      className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]" : "border-golf-green-100 dark:border-[#2a5a48]"}`}
-                    >
-                      Hole 10
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           {/* Choose Players */}
           {selectedCourseForStart && (
@@ -1245,17 +1341,42 @@ export default function GolfScoreTracker() {
         </div>
       </Modal>
 
-      {/* Add Course Modal */}
-      <Modal isOpen={isCourseModalOpen} onClose={() => setIsCourseModalOpen(false)} title="Add New Course" size="lg">
+      {/* Add / Edit Course Modal */}
+      <Modal
+        isOpen={isCourseModalOpen}
+        onClose={closeCourseModal}
+        title={editingCourseId ? "Edit Course" : "Add New Course"}
+        size="lg"
+      >
         <CourseForm
-          onSave={handleAddCourse}
-          onCancel={() => setIsCourseModalOpen(false)}
+          key={editingCourseId ?? "new-course"}
+          initialCourse={
+            editingCourseId ? courses.find((c) => c.id === editingCourseId) ?? null : null
+          }
+          onSave={handleSaveCourse}
+          onCancel={closeCourseModal}
         />
       </Modal>
 
-      {/* Add Player Modal */}
-      <Modal isOpen={isPlayerModalOpen} onClose={() => setIsPlayerModalOpen(false)} title="Add New Player">
-        <PlayerForm onSave={handleAddPlayer} onCancel={() => setIsPlayerModalOpen(false)} />
+      {/* Add / Edit Player Modal */}
+      <Modal
+        isOpen={isPlayerModalOpen}
+        onClose={closePlayerModal}
+        title={editingPlayerId ? "Edit Player" : "Add New Player"}
+      >
+        <PlayerForm
+          key={editingPlayerId ?? "new-player"}
+          initialPlayer={
+            editingPlayerId ? players.find((p) => p.id === editingPlayerId) ?? null : null
+          }
+          hasCalculatedIndex={
+            editingPlayerId
+              ? !playerUsesStartingHandicap(editingPlayerId, rounds, courses)
+              : false
+          }
+          onSave={handleSavePlayer}
+          onCancel={closePlayerModal}
+        />
       </Modal>
 
                   {/* Improved Player Detail Modal */}

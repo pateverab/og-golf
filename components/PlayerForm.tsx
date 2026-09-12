@@ -1,16 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import type { Player } from "@/lib/types";
+import { getPlayerStartingHandicap } from "@/lib/calculations";
 
 interface PlayerFormProps {
   onSave: (name: string, nickname: string, startingHandicap: number) => void;
   onCancel: () => void;
+  /** When set, form is in edit mode and prefilled. */
+  initialPlayer?: Player | null;
+  /** True when OG index is already calculated from rounds (starting HCP is fallback only). */
+  hasCalculatedIndex?: boolean;
 }
 
-export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
-  const [name, setName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [handicap, setHandicap] = useState(0);
+export function PlayerForm({
+  onSave,
+  onCancel,
+  initialPlayer,
+  hasCalculatedIndex = false,
+}: PlayerFormProps) {
+  const isEdit = !!initialPlayer;
+  const [name, setName] = useState(initialPlayer?.name ?? "");
+  const [nickname, setNickname] = useState(initialPlayer?.nickname ?? "");
+  const [handicap, setHandicap] = useState(
+    initialPlayer ? getPlayerStartingHandicap(initialPlayer) : 0
+  );
+
+  useEffect(() => {
+    if (!initialPlayer) return;
+    setName(initialPlayer.name);
+    setNickname(initialPlayer.nickname ?? "");
+    setHandicap(getPlayerStartingHandicap(initialPlayer));
+  }, [initialPlayer]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +54,9 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">Nickname (optional)</label>
+        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">
+          Nickname (optional)
+        </label>
         <input
           type="text"
           value={nickname}
@@ -44,7 +67,9 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">Starting OG Index</label>
+        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">
+          Starting OG Index
+        </label>
         <div className="flex items-center gap-4">
           <input
             type="range"
@@ -65,7 +90,17 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
             />
           </div>
         </div>
-        <p className="text-xs text-[#c5a36f]/70 mt-1.5">Kept until this player finishes ≥1 full round, then replaced by their OG index (not USGA).</p>
+        {isEdit && hasCalculatedIndex ? (
+          <p className="text-xs text-[#c5a36f]/70 mt-1.5">
+            Current OG index is {initialPlayer!.handicap} (from rounds). Editing updates the
+            stored starting/fallback value; displayed index stays calculated until rounds change.
+          </p>
+        ) : (
+          <p className="text-xs text-[#c5a36f]/70 mt-1.5">
+            Kept until this player finishes ≥1 full round, then replaced by their OG index (not
+            USGA).
+          </p>
+        )}
       </div>
 
       <div className="flex gap-3 pt-3">
@@ -81,7 +116,7 @@ export function PlayerForm({ onSave, onCancel }: PlayerFormProps) {
           disabled={!name.trim()}
           className="golf-btn flex-1 py-3.5 rounded-xl disabled:opacity-50"
         >
-          Add Player
+          {isEdit ? "Save Changes" : "Add Player"}
         </button>
       </div>
     </form>
