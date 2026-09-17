@@ -766,17 +766,26 @@ export default function GolfScoreTracker() {
                 >
                   ← Previous Hole
                 </button>
-                <button
-                  onClick={() => {
-                    if (activeHoleIndex >= 0 && activeHoleIndex < activeHolesInPlay.length - 1) {
-                      setCurrentHole(activeHolesInPlay[activeHoleIndex + 1]);
-                    }
-                  }}
-                  disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
-                  className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
-                >
-                  Next Hole →
-                </button>
+                {activeHoleIndex >= 0 && activeHoleIndex === activeHolesInPlay.length - 1 ? (
+                  <button
+                    onClick={() => saveActiveRound(true)}
+                    className="py-5 text-lg font-bold rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] active:opacity-90 transition-all"
+                  >
+                    Finish Round →
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (activeHoleIndex >= 0 && activeHoleIndex < activeHolesInPlay.length - 1) {
+                        setCurrentHole(activeHolesInPlay[activeHoleIndex + 1]);
+                      }
+                    }}
+                    disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
+                    className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
+                  >
+                    Next Hole →
+                  </button>
+                )}
               </div>
             </div>
           </div>
