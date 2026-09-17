@@ -1,6 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useGolfStore } from "@/hooks/useGolfStore";
+import {
+  withUpdatedHoleScore,
+  getPlayerScoreOnHole as readPlayerScoreOnHole,
+  getActiveTotalForPlayer as readActiveTotalForPlayer,
+  getActiveVsParForPlayer as readActiveVsParForPlayer,
+  isActiveRoundFullyScored as readIsActiveRoundFullyScored,
+} from "@/lib/activeRound";
 import {
   Course,
   Player,
@@ -11,17 +19,7 @@ import {
   NineSide,
   RoundLength,
 } from "@/lib/types";
-import {
-  getCourses,
-  saveCourses,
-  getPlayers,
-  savePlayers,
-  getRounds,
-  saveRounds,
-  getActiveRound as getStoredActiveRound,
-  saveActiveRound as persistActiveRound,
-  clearActiveRound as clearStoredActiveRound,
-} from "@/lib/storage";
+import { clearActiveRound as clearStoredActiveRound } from "@/lib/storage";
 import {
   calculateHandicapForPlayer,
   recalculateAllHandicaps,
@@ -50,10 +48,20 @@ import {
   mergeTestData,
 } from "@/lib/testData";
 export default function GolfScoreTracker() {
-  // Core data
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [rounds, setRounds] = useState<Round[]>([]);
+  const {
+    courses,
+    setCourses,
+    players,
+    setPlayers,
+    rounds,
+    setRounds,
+    activeRound,
+    setActiveRound,
+    currentHole,
+    setCurrentHole,
+    storageHydrated,
+    restoredActiveRound,
+  } = useGolfStore();
 
   // UI state
   const [activeTab, setActiveTab] = useState<"home" | "rounds" | "stats">("home");
@@ -67,39 +75,19 @@ export default function GolfScoreTracker() {
   const [roundLengthForStart, setRoundLengthForStart] = useState<RoundLength>(18);
   const [nineSideForStart, setNineSideForStart] = useState<NineSide>("front");
   const [startingHoleForStart, setStartingHoleForStart] = useState<1 | 10>(1);
-
-  // Active round state
-  const [activeRound, setActiveRound] = useState<ActiveRound | null>(null);
-  const [currentHole, setCurrentHole] = useState(1);
-
   // Past round detail
   const [viewingRoundId, setViewingRoundId] = useState<string | null>(null);
 
   // Player detail modal in round view
   const [playerDetailModal, setPlayerDetailModal] = useState<{ playerId: string; roundId: string } | null>(null);
-
-  // Avoid wiping localStorage before the initial restore completes
-  const [storageHydrated, setStorageHydrated] = useState(false);
-
-  // Install CTA: iOS Safari only, and only when not already installed (standalone)
   const [showInstallButton, setShowInstallButton] = useState(false);
 
-  // Load from localStorage on mount
+  // If hydrate restored an in-progress round, land on the rounds tab once.
   useEffect(() => {
-    setCourses(getCourses());
-    setPlayers(getPlayers());
-    setRounds(getRounds());
-
-
-    const stored = getStoredActiveRound();
-    if (stored?.round) {
-      setActiveRound(stored.round);
-      setCurrentHole(stored.currentHole || stored.round.startingHole || 1);
+    if (restoredActiveRound) {
       setActiveTab("rounds");
     }
-
-    setStorageHydrated(true);
-  }, []);
+  }, [restoredActiveRound]);
 
   useEffect(() => {
     const nav = window.navigator as Navigator & { standalone?: boolean };
@@ -111,43 +99,6 @@ export default function GolfScoreTracker() {
       (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
     setShowInstallButton(isIOS && !isStandalone);
   }, []);
-
-  // Persist whenever data changes — including empty arrays so deletions stick
-  useEffect(() => {
-    if (!storageHydrated) return;
-    saveCourses(courses);
-  }, [courses, storageHydrated]);
-
-  useEffect(() => {
-    if (!storageHydrated) return;
-    savePlayers(players);
-  }, [players, storageHydrated]);
-
-  useEffect(() => {
-    if (!storageHydrated) return;
-    saveRounds(rounds);
-  }, [rounds, storageHydrated]);
-
-  // Persist in-progress round (scores, hole nav) so refresh / Safari kill can restore it
-  useEffect(() => {
-    if (!storageHydrated) return;
-    if (activeRound) {
-      persistActiveRound({ round: activeRound, currentHole });
-    } else {
-      clearStoredActiveRound();
-    }
-  }, [activeRound, currentHole, storageHydrated]);
-
-  // Prefer beforeunload when a round is in progress (desktop; limited on iOS Safari)
-  useEffect(() => {
-    if (!activeRound) return;
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [activeRound]);
 
   // ==================== COURSES ====================
   const openAddCourseModal = () => {
@@ -316,33 +267,9 @@ export default function GolfScoreTracker() {
 
   const updateScore = (playerId: string, holeNumber: number, newScore: number) => {
     if (!activeRound) return;
-
-    setActiveRound((prev) => {
-      if (!prev) return prev;
-
-      const playerScores = [...(prev.scores[playerId] || [])];
-      const existingIndex = playerScores.findIndex((s) => s.holeNumber === holeNumber);
-
-      const clampedScore = Math.max(1, Math.min(15, newScore)); // Reasonable bounds
-
-      if (existingIndex >= 0) {
-        playerScores[existingIndex] = { holeNumber, score: clampedScore };
-      } else {
-        playerScores.push({ holeNumber, score: clampedScore });
-      }
-
-      // Sort by hole number
-      playerScores.sort((a, b) => a.holeNumber - b.holeNumber);
-
-      return {
-        ...prev,
-        scores: {
-          ...prev.scores,
-          [playerId]: playerScores,
-        },
-      };
-    });
+    setActiveRound((prev) => (prev ? withUpdatedHoleScore(prev, playerId, holeNumber, newScore) : prev));
   };
+
 
   const adjustScore = (playerId: string, holeNumber: number, delta: number) => {
     if (!activeRound) return;
@@ -358,46 +285,31 @@ export default function GolfScoreTracker() {
 
   const getPlayerScoreOnHole = (playerId: string, holeNumber: number): number | null => {
     if (!activeRound) return null;
-    return activeRound.scores[playerId]?.find((s) => s.holeNumber === holeNumber)?.score ?? null;
+    return readPlayerScoreOnHole(activeRound, playerId, holeNumber);
   };
 
-  // Helpers for live round totals (used in score entry for context)
-  const getActiveScoresForPlayer = (playerId: string) => {
-    if (!activeRound || !currentCourseForActiveRound) return [];
-    const holesInPlay = new Set(getHolesInPlay(currentCourseForActiveRound, activeRound));
-    return (activeRound.scores[playerId] || []).filter((s) => holesInPlay.has(s.holeNumber));
-  };
 
   const getActiveTotalForPlayer = (playerId: string): number => {
-    return getActiveScoresForPlayer(playerId).reduce((sum, s) => sum + s.score, 0);
+    if (!activeRound || !currentCourseForActiveRound) return 0;
+    return readActiveTotalForPlayer(activeRound, currentCourseForActiveRound, playerId);
   };
 
   const getActiveVsParForPlayer = (playerId: string): number => {
-    if (!currentCourseForActiveRound) return 0;
-    return getActiveScoresForPlayer(playerId).reduce((diff, s) => {
-      const hole = currentCourseForActiveRound.holes.find((h) => h.number === s.holeNumber);
-      return diff + (s.score - (hole?.par ?? 4));
-    }, 0);
+    if (!activeRound || !currentCourseForActiveRound) return 0;
+    return readActiveVsParForPlayer(activeRound, currentCourseForActiveRound, playerId);
   };
 
   const setScoreToPar = (playerId: string, holeNumber: number, par: number) => {
     updateScore(playerId, holeNumber, par);
   };
 
-  // True when every player has a score for every hole in play
   const isActiveRoundFullyScored = (): boolean => {
     if (!activeRound) return false;
     const course = getCurrentCourse();
     if (!course) return false;
-
-    const holesInPlay = getHolesInPlay(course, activeRound);
-    return activeRound.playerIds.every((pid) => {
-      const playerScores = activeRound.scores[pid] || [];
-      return holesInPlay.every((holeNumber) =>
-        playerScores.some((s) => s.holeNumber === holeNumber)
-      );
-    });
+    return readIsActiveRoundFullyScored(activeRound, course);
   };
+
 
   // Save current active round (can be partial). Upserts by ActiveRound.id so
   // "Save & Continue Later" updates one draft instead of spawning duplicates.
