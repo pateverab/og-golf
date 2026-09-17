@@ -12,7 +12,7 @@ const TEST_PLAYER_IDS = {
   alex: `${TEST_ID_PREFIX}player-alex`,
 } as const;
 
-const COURSE_PARS = [4, 4, 5, 3, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5];
+const COURSE_PARS = [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 5, 4, 3, 4, 4, 3, 5, 4];
 
 // 5 group rounds — each player appears in every round with varied vs-par scores
 const ROUND_SCHEDULE: Array<{
