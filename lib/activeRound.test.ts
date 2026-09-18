@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { ActiveRound, Course } from "@/lib/types";
 import {
   clampStrokeScore,
+  getLiveStrokes,
   getPlayerScoreOnHole,
   isActiveRoundFullyScored,
+  withHoleOut,
+  withIncrementLiveStroke,
+  withLiveStrokes,
   withUpdatedHoleScore,
+  withClearedLiveStrokesForHole,
 } from "@/lib/activeRound";
 
 function course9(): Course {
@@ -49,5 +54,43 @@ describe("activeRound helpers", () => {
 
     expect(getPlayerScoreOnHole(round, "p1", 3)).toBe(4);
     expect(isActiveRoundFullyScored(round, course)).toBe(true);
+  });
+});
+
+describe("live stroke clicker helpers", () => {
+  it("tracks live taps without writing HoleScore", () => {
+    let round = baseRound();
+    round = withIncrementLiveStroke(round, "p1", 1, 1);
+    round = withIncrementLiveStroke(round, "p1", 1, 1);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(2);
+    expect(getPlayerScoreOnHole(round, "p1", 1)).toBeNull();
+    expect(isActiveRoundFullyScored(round, course9())).toBe(false);
+  });
+
+  it("hole-out commits live count and clears taps", () => {
+    let round = baseRound();
+    round = withLiveStrokes(round, "p1", 1, 5);
+    round = withHoleOut(round, "p1", 1);
+    expect(getPlayerScoreOnHole(round, "p1", 1)).toBe(5);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(0);
+  });
+
+  it("hole-out with zero live taps is a no-op", () => {
+    const round = withHoleOut(baseRound(), "p1", 1);
+    expect(getPlayerScoreOnHole(round, "p1", 1)).toBeNull();
+    expect(round.liveStrokes).toBeUndefined();
+  });
+
+  it("manual clear drops leftover live taps", () => {
+    let round = withLiveStrokes(baseRound(), "p1", 2, 3);
+    round = withClearedLiveStrokesForHole(round, "p1", 2);
+    expect(getLiveStrokes(round, "p1", 2)).toBe(0);
+  });
+
+  it("clamps live taps to 0–15", () => {
+    let round = withLiveStrokes(baseRound(), "p1", 1, 99);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(15);
+    round = withLiveStrokes(round, "p1", 1, -3);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(0);
   });
 });
