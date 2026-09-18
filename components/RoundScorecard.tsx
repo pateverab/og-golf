@@ -1,4 +1,12 @@
+import type { CSSProperties, ReactNode } from "react";
 import type { RoundExportData } from "@/lib/roundExport";
+import {
+  SCORE_MARK_LEGEND,
+  isCircleMark,
+  markRingCount,
+  scoreMark,
+  type ScoreMarkKind,
+} from "@/lib/scoreMarks";
 
 interface RoundScorecardProps {
   data: RoundExportData;
@@ -7,6 +15,103 @@ interface RoundScorecardProps {
 function formatVsPar(vsPar: number): string {
   if (vsPar === 0) return "E";
   return vsPar > 0 ? `+${vsPar}` : String(vsPar);
+}
+
+const STROKE_UNDER = "#0f3d24";
+const STROKE_OVER = "#8b2942";
+const STROKE_GOLD = "#c5a36f";
+
+function markStroke(kind: ScoreMarkKind): string {
+  if (isCircleMark(kind)) return STROKE_UNDER;
+  if (kind === "bogey" || kind === "double") return STROKE_OVER;
+  return STROKE_GOLD;
+}
+
+/** Nested concentric circle/square around the score digit. */
+function MarkedScore({
+  score,
+  vsPar,
+}: {
+  score: number | null;
+  vsPar: number | null;
+}) {
+  if (score === null || vsPar === null) {
+    return <span style={{ color: "#5a6b62" }}>—</span>;
+  }
+
+  const kind = scoreMark(vsPar);
+  const rings = markRingCount(kind);
+  if (rings === 0) {
+    return <span>{score}</span>;
+  }
+
+  const circle = isCircleMark(kind);
+  const stroke = markStroke(kind);
+  const radius = circle ? 999 : 2;
+
+  let node: ReactNode = (
+    <span
+      style={{
+        fontWeight: 700,
+        fontSize: 11,
+        lineHeight: 1,
+        color: "#051b14",
+        padding: "0 1px",
+      }}
+    >
+      {score}
+    </span>
+  );
+
+  // Innermost → outermost: each ring adds border + padding
+  for (let i = 0; i < rings; i++) {
+    node = (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxSizing: "border-box",
+          border: `1.5px solid ${stroke}`,
+          borderRadius: radius,
+          padding: i === 0 ? "2px 4px" : "1.5px",
+          minWidth: i === rings - 1 ? 22 : undefined,
+          minHeight: i === rings - 1 ? 22 : undefined,
+        }}
+      >
+        {node}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 26,
+      }}
+    >
+      {node}
+    </span>
+  );
+}
+
+function Legend({ style }: { style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        fontSize: 10,
+        color: "#5a6b62",
+        letterSpacing: "0.02em",
+        marginTop: 8,
+        ...style,
+      }}
+    >
+      {SCORE_MARK_LEGEND}
+    </div>
+  );
 }
 
 export function RoundScorecard({ data }: RoundScorecardProps) {
@@ -114,7 +219,14 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                         {h.number}
                       </th>
                     ))}
-                    <th style={{ padding: 6, textAlign: "center", backgroundColor: "#c5a36f", color: "#051b14" }}>
+                    <th
+                      style={{
+                        padding: 6,
+                        textAlign: "center",
+                        backgroundColor: "#c5a36f",
+                        color: "#051b14",
+                      }}
+                    >
                       OUT
                     </th>
                     {back.map((h) => (
@@ -122,10 +234,24 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                         {h.number}
                       </th>
                     ))}
-                    <th style={{ padding: 6, textAlign: "center", backgroundColor: "#c5a36f", color: "#051b14" }}>
+                    <th
+                      style={{
+                        padding: 6,
+                        textAlign: "center",
+                        backgroundColor: "#c5a36f",
+                        color: "#051b14",
+                      }}
+                    >
                       IN
                     </th>
-                    <th style={{ padding: 6, textAlign: "center", backgroundColor: "#0f3d24", color: "#c5a36f" }}>
+                    <th
+                      style={{
+                        padding: 6,
+                        textAlign: "center",
+                        backgroundColor: "#0f3d24",
+                        color: "#c5a36f",
+                      }}
+                    >
                       TOT
                     </th>
                   </tr>
@@ -133,7 +259,10 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                 <tbody>
                   <tr>
                     {front.map((h) => (
-                      <td key={`par-${h.number}`} style={{ padding: 6, textAlign: "center", color: "#5a6b62" }}>
+                      <td
+                        key={`par-${h.number}`}
+                        style={{ padding: 6, textAlign: "center", color: "#5a6b62" }}
+                      >
                         {h.par}
                       </td>
                     ))}
@@ -141,7 +270,10 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                       {front.reduce((s, h) => s + h.par, 0)}
                     </td>
                     {back.map((h) => (
-                      <td key={`par-${h.number}`} style={{ padding: 6, textAlign: "center", color: "#5a6b62" }}>
+                      <td
+                        key={`par-${h.number}`}
+                        style={{ padding: 6, textAlign: "center", color: "#5a6b62" }}
+                      >
                         {h.par}
                       </td>
                     ))}
@@ -149,22 +281,27 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                       {back.reduce((s, h) => s + h.par, 0)}
                     </td>
                     <td style={{ padding: 6, textAlign: "center", fontWeight: 600 }}>
-                      {front.reduce((s, h) => s + h.par, 0) + back.reduce((s, h) => s + h.par, 0)}
+                      {front.reduce((s, h) => s + h.par, 0) +
+                        back.reduce((s, h) => s + h.par, 0)}
                     </td>
                   </tr>
                   <tr style={{ fontWeight: 700 }}>
                     {front.map((h) => (
-                      <td key={`score-${h.number}`} style={{ padding: 6, textAlign: "center" }}>
-                        {h.score ?? "—"}
+                      <td key={`score-${h.number}`} style={{ padding: 4, textAlign: "center" }}>
+                        <MarkedScore score={h.score} vsPar={h.vsPar} />
                       </td>
                     ))}
-                    <td style={{ padding: 6, textAlign: "center" }}>{player.frontTotal || "—"}</td>
+                    <td style={{ padding: 6, textAlign: "center" }}>
+                      {player.frontTotal || "—"}
+                    </td>
                     {back.map((h) => (
-                      <td key={`score-${h.number}`} style={{ padding: 6, textAlign: "center" }}>
-                        {h.score ?? "—"}
+                      <td key={`score-${h.number}`} style={{ padding: 4, textAlign: "center" }}>
+                        <MarkedScore score={h.score} vsPar={h.vsPar} />
                       </td>
                     ))}
-                    <td style={{ padding: 6, textAlign: "center" }}>{player.backTotal || "—"}</td>
+                    <td style={{ padding: 6, textAlign: "center" }}>
+                      {player.backTotal || "—"}
+                    </td>
                     <td style={{ padding: 6, textAlign: "center" }}>{player.total}</td>
                   </tr>
                 </tbody>
@@ -188,7 +325,7 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                       <td style={{ padding: 8 }}>#{hole.number}</td>
                       <td style={{ padding: 8, textAlign: "center" }}>{hole.par}</td>
                       <td style={{ padding: 8, textAlign: "center", fontWeight: 600 }}>
-                        {hole.score ?? "—"}
+                        <MarkedScore score={hole.score} vsPar={hole.vsPar} />
                       </td>
                       <td style={{ padding: 8, textAlign: "center" }}>
                         {hole.vsPar !== null ? formatVsPar(hole.vsPar) : "—"}
@@ -198,12 +335,14 @@ export function RoundScorecard({ data }: RoundScorecardProps) {
                 </tbody>
               </table>
             )}
+
+            <Legend />
           </div>
         );
       })}
 
       <div style={{ fontSize: 10, color: "#5a6b62", textAlign: "center", marginTop: 16 }}>
-        Generated by OG Golf
+        Generated by OG Golf · {SCORE_MARK_LEGEND}
       </div>
     </div>
   );
