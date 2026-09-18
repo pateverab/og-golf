@@ -9,8 +9,8 @@ import {
   getActiveVsParForPlayer as readActiveVsParForPlayer,
   isActiveRoundFullyScored as readIsActiveRoundFullyScored,
   getLiveStrokes as readLiveStrokes,
-  withIncrementLiveStroke,
-  withLiveStrokes,
+  withRecordedLiveStroke,
+  withUndoLastLiveStroke,
   withHoleOut,
   withClearedLiveStrokesForHole,
 } from "@/lib/activeRound";
@@ -23,6 +23,7 @@ import {
   HoleScore,
   NineSide,
   RoundLength,
+  Lie,
 } from "@/lib/types";
 import { clearActiveRound as clearStoredActiveRound } from "@/lib/storage";
 import {
@@ -301,16 +302,27 @@ export default function GolfScoreTracker() {
     updateScore(playerId, holeNumber, current + delta);
   };
 
-  const incrementLiveStroke = (playerId: string, holeNumber: number) => {
-    setActiveRound((prev) => (prev ? withIncrementLiveStroke(prev, playerId, holeNumber, 1) : prev));
+  const incrementLiveStroke = (playerId: string, holeNumber: number, lie?: Lie) => {
+    setActiveRound((prev) =>
+      prev ? withRecordedLiveStroke(prev, playerId, holeNumber, { lie }) : prev
+    );
   };
 
   const decrementLiveStroke = (playerId: string, holeNumber: number) => {
-    setActiveRound((prev) => {
-      if (!prev) return prev;
-      const current = readLiveStrokes(prev, playerId, holeNumber);
-      return withLiveStrokes(prev, playerId, holeNumber, current - 1);
-    });
+    setActiveRound((prev) =>
+      prev ? withUndoLastLiveStroke(prev, playerId, holeNumber) : prev
+    );
+  };
+
+  const penaltyLiveStroke = (playerId: string, holeNumber: number, lie?: Lie) => {
+    setActiveRound((prev) =>
+      prev
+        ? withRecordedLiveStroke(prev, playerId, holeNumber, {
+            lie,
+            penalty: true,
+          })
+        : prev
+    );
   };
 
   /** Commit live taps → HoleScore; advance when every player has this hole scored. */
@@ -758,8 +770,9 @@ export default function GolfScoreTracker() {
                           par={par}
                           liveCount={liveCount}
                           committedScore={currentScore}
-                          onIncrement={() => incrementLiveStroke(playerId, currentHole)}
+                          onIncrement={(lie) => incrementLiveStroke(playerId, currentHole, lie)}
                           onDecrement={() => decrementLiveStroke(playerId, currentHole)}
+                          onPenalty={(lie) => penaltyLiveStroke(playerId, currentHole, lie)}
                           onHoleOut={() => holeOutLiveStroke(playerId, currentHole)}
                           onEditManual={() =>
                             setManualScorePlayers((prev) =>

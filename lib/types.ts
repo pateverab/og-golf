@@ -56,6 +56,17 @@ export interface Round {
 }
 
 // Helper type for the live round in progress (not yet saved)
+/** Optional starting zone for a live swing (not stored on HoleScore). */
+export type Lie = "tee" | "fairway" | "rough" | "bunker" | "green" | "other";
+
+/** One mid-hole swing / penalty recorded while the live clicker is active. */
+export interface ShotLog {
+  holeNumber: number;
+  stroke: number;
+  lie?: Lie;
+  penalty?: boolean;
+}
+
 export interface ActiveRound {
   id: string; // Stable Round id for upserting incomplete drafts in golf_rounds
   courseId: string;
@@ -63,6 +74,8 @@ export interface ActiveRound {
   scores: Record<string, HoleScore[]>; // playerId -> scores
   /** In-progress mid-hole tap counts. Not a committed HoleScore until hole-out. */
   liveStrokes?: Record<string, Record<number, number>>; // playerId -> holeNumber -> count (0+)
+  /** Optional per-shot lie / penalty log. Never required for Hole Out. */
+  shotLog?: Record<string, ShotLog[]>; // playerId -> shots
   startTime: string;
   roundLength: RoundLength;
   nineSide: NineSide;
