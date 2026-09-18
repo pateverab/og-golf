@@ -4,10 +4,13 @@ import {
   clampStrokeScore,
   getLiveStrokes,
   getPlayerScoreOnHole,
+  getShotLogForHole,
   isActiveRoundFullyScored,
   withHoleOut,
   withIncrementLiveStroke,
   withLiveStrokes,
+  withRecordedLiveStroke,
+  withUndoLastLiveStroke,
   withUpdatedHoleScore,
   withClearedLiveStrokesForHole,
 } from "@/lib/activeRound";
@@ -92,5 +95,56 @@ describe("live stroke clicker helpers", () => {
     expect(getLiveStrokes(round, "p1", 1)).toBe(15);
     round = withLiveStrokes(round, "p1", 1, -3);
     expect(getLiveStrokes(round, "p1", 1)).toBe(0);
+  });
+});
+
+describe("shot log + lie recording", () => {
+  it("records optional lie on +1 without writing HoleScore", () => {
+    let round = withRecordedLiveStroke(baseRound(), "p1", 1, { lie: "tee" });
+    expect(getLiveStrokes(round, "p1", 1)).toBe(1);
+    expect(getPlayerScoreOnHole(round, "p1", 1)).toBeNull();
+    expect(getShotLogForHole(round, "p1", 1)).toEqual([
+      { holeNumber: 1, stroke: 1, lie: "tee" },
+    ]);
+  });
+
+  it("omits lie when none selected", () => {
+    const round = withRecordedLiveStroke(baseRound(), "p1", 2);
+    expect(getShotLogForHole(round, "p1", 2)[0]).toEqual({
+      holeNumber: 2,
+      stroke: 1,
+    });
+  });
+
+  it("records penalty strokes", () => {
+    const round = withRecordedLiveStroke(baseRound(), "p1", 1, {
+      lie: "other",
+      penalty: true,
+    });
+    expect(getShotLogForHole(round, "p1", 1)[0]).toMatchObject({
+      stroke: 1,
+      lie: "other",
+      penalty: true,
+    });
+  });
+
+  it("undo pops last shot log for that hole and decrements live", () => {
+    let round = withRecordedLiveStroke(baseRound(), "p1", 1, { lie: "tee" });
+    round = withRecordedLiveStroke(round, "p1", 1, { lie: "fairway" });
+    round = withUndoLastLiveStroke(round, "p1", 1);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(1);
+    expect(getShotLogForHole(round, "p1", 1)).toEqual([
+      { holeNumber: 1, stroke: 1, lie: "tee" },
+    ]);
+  });
+
+  it("hole out commits score and leaves shot log intact", () => {
+    let round = withRecordedLiveStroke(baseRound(), "p1", 1, { lie: "tee" });
+    round = withRecordedLiveStroke(round, "p1", 1, { lie: "green" });
+    round = withRecordedLiveStroke(round, "p1", 1, { lie: "green" });
+    round = withHoleOut(round, "p1", 1);
+    expect(getPlayerScoreOnHole(round, "p1", 1)).toBe(3);
+    expect(getLiveStrokes(round, "p1", 1)).toBe(0);
+    expect(getShotLogForHole(round, "p1", 1)).toHaveLength(3);
   });
 });

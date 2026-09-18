@@ -1,4 +1,4 @@
-import type { ActiveRound, Course, HoleScore } from "@/lib/types";
+import type { ActiveRound, Course, HoleScore, Lie, ShotLog } from "@/lib/types";
 import { getHolesInPlay } from "@/lib/calculations";
 
 /** Clamp stroke entry to a sensible on-course range. */
@@ -156,4 +156,85 @@ export function withClearedLiveStrokesForHole(
   holeNumber: number
 ): ActiveRound {
   return withLiveStrokes(round, playerId, holeNumber, 0);
+}
+
+
+function withPlayerShotLog(
+  round: ActiveRound,
+  playerId: string,
+  nextLogs: ShotLog[]
+): ActiveRound {
+  const shotLog = { ...(round.shotLog || {}) };
+  if (nextLogs.length === 0) {
+    delete shotLog[playerId];
+  } else {
+    shotLog[playerId] = nextLogs;
+  }
+  const next: ActiveRound = { ...round };
+  if (Object.keys(shotLog).length === 0) {
+    delete next.shotLog;
+  } else {
+    next.shotLog = shotLog;
+  }
+  return next;
+}
+
+export function getShotLogForHole(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number
+): ShotLog[] {
+  return (round.shotLog?.[playerId] || []).filter((s) => s.holeNumber === holeNumber);
+}
+
+/**
+ * +1 stroke (or penalty). Appends optional lie / penalty to shotLog.
+ * Does not write HoleScore.
+ */
+export function withRecordedLiveStroke(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number,
+  opts?: { lie?: Lie; penalty?: boolean }
+): ActiveRound {
+  const current = getLiveStrokes(round, playerId, holeNumber);
+  const nextStroke = clampLiveStrokes(current + 1);
+  if (nextStroke <= current) {
+    // Already at max (15)
+    return round;
+  }
+
+  const bumped = withLiveStrokes(round, playerId, holeNumber, nextStroke);
+  const entry: ShotLog = {
+    holeNumber,
+    stroke: nextStroke,
+  };
+  if (opts?.lie) entry.lie = opts.lie;
+  if (opts?.penalty) entry.penalty = true;
+
+  const logs = [...(bumped.shotLog?.[playerId] || []), entry];
+  return withPlayerShotLog(bumped, playerId, logs);
+}
+
+/**
+ * Undo last live stroke for this hole: decrement liveStrokes and pop the
+ * last shotLog entry for that player+hole.
+ */
+export function withUndoLastLiveStroke(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number
+): ActiveRound {
+  const current = getLiveStrokes(round, playerId, holeNumber);
+  if (current <= 0) return round;
+
+  const decremented = withLiveStrokes(round, playerId, holeNumber, current - 1);
+  const logs = [...(decremented.shotLog?.[playerId] || [])];
+  for (let i = logs.length - 1; i >= 0; i--) {
+    if (logs[i].holeNumber === holeNumber) {
+      logs.splice(i, 1);
+      break;
+    }
+  }
+  return withPlayerShotLog(decremented, playerId, logs);
 }

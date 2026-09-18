@@ -1,20 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import type { Lie } from "@/lib/types";
+
+const LIE_OPTIONS: { id: Lie; label: string }[] = [
+  { id: "tee", label: "Tee" },
+  { id: "fairway", label: "Fairway" },
+  { id: "rough", label: "Rough" },
+  { id: "bunker", label: "Bunker" },
+  { id: "green", label: "Green" },
+  { id: "other", label: "Other" },
+];
+
 type LiveStrokeClickerProps = {
   playerName: string;
   holeNumber: number;
   par: number;
   liveCount: number;
   committedScore: number | null;
-  onIncrement: () => void;
+  onIncrement: (lie?: Lie) => void;
   onDecrement: () => void;
+  onPenalty: (lie?: Lie) => void;
   onHoleOut: () => void;
   onEditManual?: () => void;
 };
 
 /**
- * Mid-hole live stroke counter. Taps stay in liveStrokes until HOLE OUT
- * commits them as HoleScore — never write score on the first tee tap.
+ * Mid-hole live stroke counter. Optional lie chips tag where the next swing
+ * starts — never required for +1 / Hole Out, never written onto HoleScore.
  */
 export function LiveStrokeClicker({
   playerName,
@@ -24,11 +37,12 @@ export function LiveStrokeClicker({
   committedScore,
   onIncrement,
   onDecrement,
+  onPenalty,
   onHoleOut,
   onEditManual,
 }: LiveStrokeClickerProps) {
   const isCommitted = committedScore !== null;
-  const lying = isCommitted ? committedScore : liveCount;
+  const lying = isCommitted ? committedScore! : liveCount;
   const nextShot = lying + 1;
   const canHoleOut = !isCommitted && liveCount >= 1;
   const vsPar =
@@ -37,6 +51,30 @@ export function LiveStrokeClicker({
       : liveCount > 0
         ? liveCount - par
         : null;
+
+  // MVP: Tee default only for stroke 1; clear after each +1 / penalty.
+  const [selectedLie, setSelectedLie] = useState<Lie | null>("tee");
+
+  useEffect(() => {
+    if (isCommitted) return;
+    if (liveCount === 0) {
+      setSelectedLie("tee");
+    }
+  }, [liveCount, holeNumber, isCommitted]);
+
+  const toggleLie = (lie: Lie) => {
+    setSelectedLie((prev) => (prev === lie ? null : lie));
+  };
+
+  const handleIncrement = () => {
+    onIncrement(selectedLie ?? undefined);
+    setSelectedLie(null);
+  };
+
+  const handlePenalty = () => {
+    onPenalty(selectedLie ?? undefined);
+    setSelectedLie(null);
+  };
 
   return (
     <div className="rounded-2xl border border-[#c5a36f]/25 bg-white dark:bg-[#0c3326] p-4">
@@ -83,7 +121,7 @@ export function LiveStrokeClicker({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onDecrement}
@@ -95,12 +133,47 @@ export function LiveStrokeClicker({
             </button>
             <button
               type="button"
-              onClick={onIncrement}
+              onClick={handleIncrement}
               aria-label="Add stroke"
               className="flex-1 h-[68px] rounded-2xl bg-[#c5a36f] text-[#051b14] text-xl font-bold active:opacity-90 active:scale-[0.985] transition"
             >
               +1 Stroke
             </button>
+            <button
+              type="button"
+              onClick={handlePenalty}
+              aria-label="Add penalty stroke"
+              className="h-[68px] px-3 rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-sm font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
+            >
+              +1
+              <br />
+              Penalty
+            </button>
+          </div>
+
+          <div>
+            <div className="text-[10px] tracking-wider text-[#c5a36f]/70 mb-1.5 px-0.5">
+              LIE (OPTIONAL)
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {LIE_OPTIONS.map((opt) => {
+                const active = selectedLie === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => toggleLie(opt.id)}
+                    className={`py-3 rounded-xl text-sm font-semibold border-2 transition active:scale-[0.97] ${
+                      active
+                        ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
+                        : "bg-white dark:bg-[#0a2e1f] text-[#c5a36f] border-[#c5a36f]/35"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <button
