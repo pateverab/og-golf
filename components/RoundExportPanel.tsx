@@ -6,7 +6,7 @@ import {
   buildRoundExportData,
   captureScorecardImage,
   downloadRoundPdf,
-  copyTextToClipboard,
+  shareTextSummary,
   generateRoundTextSummary,
   getRoundExportFilename,
   shareFile,
@@ -65,11 +65,13 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
     setLoading("text-share");
     try {
       const summary = generateRoundTextSummary(exportData);
-      await copyTextToClipboard(summary);
-      alert("Copied to clipboard! Paste into WhatsApp or Messages.");
+      const result = await shareTextSummary(summary, shareTitle);
+      if (result === "copied") {
+        alert("Copied to clipboard! Paste into WhatsApp or Messages.");
+      }
     } catch (error) {
-      console.error("Copy failed:", error);
-      alert("Could not copy to clipboard. Please try again.");
+      console.error("Share copy failed:", error);
+      alert("Could not share this round. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -105,7 +107,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
         disabled={loading !== null}
         className="mt-3 w-full py-2.5 text-sm text-[#c5a36f] font-medium hover:underline disabled:opacity-50"
       >
-        {loading === "text-share" ? "Copying…" : "Share a Copy"}
+        {loading === "text-share" ? "Sharing…" : "Share a Copy"}
       </button>
 
       <div
