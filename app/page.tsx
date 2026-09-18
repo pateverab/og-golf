@@ -8,6 +8,11 @@ import {
   getActiveTotalForPlayer as readActiveTotalForPlayer,
   getActiveVsParForPlayer as readActiveVsParForPlayer,
   isActiveRoundFullyScored as readIsActiveRoundFullyScored,
+  getLiveStrokes as readLiveStrokes,
+  withIncrementLiveStroke,
+  withLiveStrokes,
+  withHoleOut,
+  withClearedLiveStrokesForHole,
 } from "@/lib/activeRound";
 import {
   Course,
@@ -41,6 +46,7 @@ import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { LiveLeaderboard } from "@/components/LiveLeaderboard";
+import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
   getTestDataSuccessMessage,
@@ -70,6 +76,13 @@ export default function GolfScoreTracker() {
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [isStartRoundModalOpen, setIsStartRoundModalOpen] = useState(false);
+  /** playerIds showing manual +/- instead of live clicker for current hole */
+  const [manualScorePlayers, setManualScorePlayers] = useState<string[]>([]);
+
+  useEffect(() => {
+    setManualScorePlayers([]);
+  }, [currentHole]);
+
   const [selectedCourseForStart, setSelectedCourseForStart] = useState<string>("");
   const [selectedPlayersForStart, setSelectedPlayersForStart] = useState<string[]>([]);
   const [roundLengthForStart, setRoundLengthForStart] = useState<RoundLength>(18);
@@ -265,9 +278,14 @@ export default function GolfScoreTracker() {
     return courses.find((c) => c.id === activeRound.courseId) || null;
   };
 
+  /** Manual / committed score write — also clears any mid-hole live taps for that hole. */
   const updateScore = (playerId: string, holeNumber: number, newScore: number) => {
     if (!activeRound) return;
-    setActiveRound((prev) => (prev ? withUpdatedHoleScore(prev, playerId, holeNumber, newScore) : prev));
+    setActiveRound((prev) => {
+      if (!prev) return prev;
+      const scored = withUpdatedHoleScore(prev, playerId, holeNumber, newScore);
+      return withClearedLiveStrokesForHole(scored, playerId, holeNumber);
+    });
   };
 
 
@@ -281,6 +299,41 @@ export default function GolfScoreTracker() {
 
     const current = activeRound.scores[playerId]?.find((s) => s.holeNumber === holeNumber)?.score ?? holePar;
     updateScore(playerId, holeNumber, current + delta);
+  };
+
+  const incrementLiveStroke = (playerId: string, holeNumber: number) => {
+    setActiveRound((prev) => (prev ? withIncrementLiveStroke(prev, playerId, holeNumber, 1) : prev));
+  };
+
+  const decrementLiveStroke = (playerId: string, holeNumber: number) => {
+    setActiveRound((prev) => {
+      if (!prev) return prev;
+      const current = readLiveStrokes(prev, playerId, holeNumber);
+      return withLiveStrokes(prev, playerId, holeNumber, current - 1);
+    });
+  };
+
+  /** Commit live taps → HoleScore; advance when every player has this hole scored. */
+  const holeOutLiveStroke = (playerId: string, holeNumber: number) => {
+    setActiveRound((prev) => {
+      if (!prev) return prev;
+      const next = withHoleOut(prev, playerId, holeNumber);
+      const course = courses.find((c) => c.id === next.courseId);
+      if (course) {
+        const holes = getHolesInPlay(course, next);
+        const allScored = next.playerIds.every((pid) =>
+          (next.scores[pid] || []).some((s) => s.holeNumber === holeNumber)
+        );
+        if (allScored) {
+          const idx = holes.indexOf(holeNumber);
+          if (idx >= 0 && idx < holes.length - 1) {
+            // Schedule hole advance outside this updater to avoid nested setState quirks.
+            queueMicrotask(() => setCurrentHole(holes[idx + 1]));
+          }
+        }
+      }
+      return next;
+    });
   };
 
   const getPlayerScoreOnHole = (playerId: string, holeNumber: number): number | null => {
@@ -669,7 +722,7 @@ export default function GolfScoreTracker() {
                   </div>
                 </div>
                 <div className="text-right text-xs text-[#c5a36f]">
-                  Tap <span className="font-semibold">Par</span> for speed<br />then adjust outliers
+                  Tap <span className="font-semibold">+1 Stroke</span><br />then <span className="font-semibold">Hole Out</span>
                 </div>
               </div>
 
@@ -678,14 +731,14 @@ export default function GolfScoreTracker() {
                   const player = players.find((p) => p.id === playerId)!;
                   const currentScore = getPlayerScoreOnHole(playerId, currentHole);
                   const par = currentCourseForActiveRound.holes.find((h) => h.number === currentHole)?.par ?? 4;
-
                   const roundTotal = getActiveTotalForPlayer(playerId);
                   const roundVsPar = getActiveVsParForPlayer(playerId);
+                  const liveCount = activeRound ? readLiveStrokes(activeRound, playerId, currentHole) : 0;
+                  const showManual = manualScorePlayers.includes(playerId);
 
                   return (
-                    <div key={playerId} className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
-                      {/* Player header + round context */}
-                      <div className="flex items-baseline justify-between mb-3 px-1">
+                    <div key={playerId} className="space-y-3">
+                      <div className="flex items-baseline justify-between px-1">
                         <div>
                           <div className="font-semibold text-lg">{player.name}</div>
                           {player.nickname && <div className="text-xs text-[#c5a36f]/70 -mt-0.5">“{player.nickname}”</div>}
@@ -698,56 +751,96 @@ export default function GolfScoreTracker() {
                         </div>
                       </div>
 
-                      {/* Fast controls row - even larger targets */}
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => adjustScore(playerId, currentHole, -1)}
-                          className="score-btn"
-                          aria-label="Decrease score"
-                        >
-                          −
-                        </button>
-
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={currentScore ?? ""}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val)) updateScore(playerId, currentHole, val);
-                          }}
-                          onBlur={(e) => {
-                            if (!e.target.value) updateScore(playerId, currentHole, par);
-                          }}
-                          placeholder={String(par)}
-                          className="score-input flex-1 max-w-[82px]"
+                      {!showManual ? (
+                        <LiveStrokeClicker
+                          playerName={player.name}
+                          holeNumber={currentHole}
+                          par={par}
+                          liveCount={liveCount}
+                          committedScore={currentScore}
+                          onIncrement={() => incrementLiveStroke(playerId, currentHole)}
+                          onDecrement={() => decrementLiveStroke(playerId, currentHole)}
+                          onHoleOut={() => holeOutLiveStroke(playerId, currentHole)}
+                          onEditManual={() =>
+                            setManualScorePlayers((prev) =>
+                              prev.includes(playerId) ? prev : [...prev, playerId]
+                            )
+                          }
                         />
+                      ) : (
+                        <div className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => adjustScore(playerId, currentHole, -1)}
+                              className="score-btn"
+                              aria-label="Decrease score"
+                            >
+                              −
+                            </button>
 
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={currentScore ?? ""}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val)) updateScore(playerId, currentHole, val);
+                              }}
+                              onBlur={(e) => {
+                                if (!e.target.value) updateScore(playerId, currentHole, par);
+                              }}
+                              placeholder={String(par)}
+                              className="score-input flex-1 max-w-[82px]"
+                            />
+
+                            <button
+                              onClick={() => adjustScore(playerId, currentHole, 1)}
+                              className="score-btn"
+                              aria-label="Increase score"
+                            >
+                              +
+                            </button>
+
+                            <button
+                              onClick={() => setScoreToPar(playerId, currentHole, par)}
+                              className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
+                            >
+                              Set to Par
+                            </button>
+                          </div>
+
+                          <div className="mt-2 px-1 flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setManualScorePlayers((prev) => prev.filter((id) => id !== playerId))
+                              }
+                              className="text-xs text-[#c5a36f]/80 underline"
+                            >
+                              Use stroke clicker
+                            </button>
+                            {currentScore !== null && (
+                              <span className={`text-sm font-semibold tabular-nums ${currentScore > par ? "text-red-400" : currentScore < par ? "text-emerald-400" : "text-[#c5a36f]"}`}>
+                                This hole: {currentScore > par ? "+" : ""}{currentScore - par}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {!showManual && currentScore === null && (
                         <button
-                          onClick={() => adjustScore(playerId, currentHole, 1)}
-                          className="score-btn"
-                          aria-label="Increase score"
+                          type="button"
+                          onClick={() =>
+                            setManualScorePlayers((prev) =>
+                              prev.includes(playerId) ? prev : [...prev, playerId]
+                            )
+                          }
+                          className="w-full text-xs text-[#c5a36f]/70 py-1"
                         >
-                          +
+                          Manual score instead
                         </button>
-
-                        {/* Set to Par - extremely useful on the course */}
-                        <button
-                          onClick={() => setScoreToPar(playerId, currentHole, par)}
-                          className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
-                        >
-                          Set to Par
-                        </button>
-                      </div>
-
-                      {/* Current hole vs par */}
-                      <div className="mt-2 px-1 text-right">
-                        {currentScore !== null && (
-                          <span className={`text-sm font-semibold tabular-nums ${currentScore > par ? "text-red-400" : currentScore < par ? "text-emerald-400" : "text-[#c5a36f]"}`}>
-                            This hole: {currentScore > par ? "+" : ""}{currentScore - par}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   );
                 })}

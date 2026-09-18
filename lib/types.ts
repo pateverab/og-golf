@@ -61,6 +61,8 @@ export interface ActiveRound {
   courseId: string;
   playerIds: string[];
   scores: Record<string, HoleScore[]>; // playerId -> scores
+  /** In-progress mid-hole tap counts. Not a committed HoleScore until hole-out. */
+  liveStrokes?: Record<string, Record<number, number>>; // playerId -> holeNumber -> count (0+)
   startTime: string;
   roundLength: RoundLength;
   nineSide: NineSide;

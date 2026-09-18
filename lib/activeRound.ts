@@ -76,3 +76,84 @@ export function isActiveRoundFullyScored(round: ActiveRound, course: Course): bo
     );
   });
 }
+
+/** Running mid-hole tap count (0+). Does not mark the hole complete. */
+export function getLiveStrokes(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number
+): number {
+  return round.liveStrokes?.[playerId]?.[holeNumber] ?? 0;
+}
+
+/** Clamp live tap count to 0–15 (0 means not started; hole-out requires ≥1). */
+export function clampLiveStrokes(count: number): number {
+  if (!Number.isFinite(count)) return 0;
+  return Math.max(0, Math.min(15, Math.floor(count)));
+}
+
+/** Set / clear a player's live stroke count for one hole without writing HoleScore. */
+export function withLiveStrokes(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number,
+  count: number
+): ActiveRound {
+  const nextCount = clampLiveStrokes(count);
+  const playerMap = { ...(round.liveStrokes?.[playerId] || {}) };
+
+  if (nextCount <= 0) {
+    delete playerMap[holeNumber];
+  } else {
+    playerMap[holeNumber] = nextCount;
+  }
+
+  const liveStrokes = { ...(round.liveStrokes || {}) };
+  if (Object.keys(playerMap).length === 0) {
+    delete liveStrokes[playerId];
+  } else {
+    liveStrokes[playerId] = playerMap;
+  }
+
+  const next: ActiveRound = { ...round };
+  if (Object.keys(liveStrokes).length === 0) {
+    delete next.liveStrokes;
+  } else {
+    next.liveStrokes = liveStrokes;
+  }
+  return next;
+}
+
+export function withIncrementLiveStroke(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number,
+  delta = 1
+): ActiveRound {
+  const current = getLiveStrokes(round, playerId, holeNumber);
+  return withLiveStrokes(round, playerId, holeNumber, current + delta);
+}
+
+/**
+ * Commit live taps as the hole score, clear live count for that hole.
+ * No-op if live count is 0 (never write a premature 1 on tee-off).
+ */
+export function withHoleOut(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number
+): ActiveRound {
+  const live = getLiveStrokes(round, playerId, holeNumber);
+  if (live <= 0) return round;
+  const scored = withUpdatedHoleScore(round, playerId, holeNumber, live);
+  return withLiveStrokes(scored, playerId, holeNumber, 0);
+}
+
+/** After manual score entry, drop any leftover live taps for that hole. */
+export function withClearedLiveStrokesForHole(
+  round: ActiveRound,
+  playerId: string,
+  holeNumber: number
+): ActiveRound {
+  return withLiveStrokes(round, playerId, holeNumber, 0);
+}
