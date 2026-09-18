@@ -5,8 +5,7 @@ import type { Course, Player, Round } from "@/lib/types";
 import {
   buildRoundExportData,
   captureScorecardImage,
-  downloadBlob,
-  generateRoundPdf,
+  downloadRoundPdf,
   copyTextToClipboard,
   generateRoundTextSummary,
   getRoundExportFilename,
@@ -36,8 +35,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
   const handleDownloadPdf = async () => {
     setLoading("pdf-download");
     try {
-      const blob = await generateRoundPdf(exportData);
-      downloadBlob(blob, getRoundExportFilename(exportData, "pdf"));
+      await downloadRoundPdf(exportData);
     } catch (error) {
       console.error("PDF export failed:", error);
       alert("Export failed. Please try again.");

@@ -147,7 +147,17 @@ export async function copyTextToClipboard(text: string): Promise<void> {
 
 export function getRoundExportFilename(data: RoundExportData, extension: string): string {
   const datePart = data.dateLabel.replace(/,/g, "").split(" ").slice(-3).join("-");
-  return `og-golf-${slugify(data.courseName)}-${slugify(datePart)}.${extension}`;
+  const ext = extension.replace(/^\./, "").toLowerCase() || "bin";
+  return `og-golf-${slugify(data.courseName)}-${slugify(datePart)}.${ext}`;
+}
+
+function ensurePdfFilename(filename: string): string {
+  return filename.toLowerCase().endsWith(".pdf") ? filename : `${filename}.pdf`;
+}
+
+function pdfBlobFromDoc(doc: import("jspdf").jsPDF): Blob {
+  // Explicit MIME — Safari/iOS often treats bare doc.output("blob") as octet-stream / extensionless.
+  return new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
 }
 
 type PdfDoc = import("jspdf").jsPDF & { lastAutoTable: { finalY: number } };
@@ -286,8 +296,9 @@ export async function generateRoundPdf(data: RoundExportData): Promise<Blob> {
     );
   }
 
-  return doc.output("blob");
+  return pdfBlobFromDoc(doc);
 }
+
 
 export async function captureScorecardImage(element: HTMLElement): Promise<Blob> {
   const { default: html2canvas } = await import("html2canvas");
@@ -307,12 +318,57 @@ export async function captureScorecardImage(element: HTMLElement): Promise<Blob>
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
+  const safeName = filename.includes(".") ? filename : `${filename}.bin`;
+  const typedBlob =
+    blob.type && blob.type !== "application/octet-stream"
+      ? blob
+      : new Blob([blob], {
+          type: safeName.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : safeName.toLowerCase().endsWith(".png")
+              ? "image/png"
+              : blob.type || "application/octet-stream",
+        });
+
+  const url = URL.createObjectURL(typedBlob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = filename;
+  link.download = safeName;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  // Delay revoke so Safari can start the download.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+/** Build and download a round PDF with an explicit .pdf name (Safari/iOS-friendly). */
+export async function downloadRoundPdf(data: RoundExportData): Promise<void> {
+  const blob = await generateRoundPdf(data);
+  const filename = ensurePdfFilename(getRoundExportFilename(data, "pdf"));
+
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+  if (isIOS && typeof navigator !== "undefined" && navigator.share) {
+    const file = new File([blob], filename, { type: "application/pdf" });
+    const shareData: ShareData = { files: [file], title: filename };
+    if (!navigator.canShare || navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+  }
+
+  downloadBlob(blob, filename);
 }
 
 export async function shareFile(
@@ -320,8 +376,13 @@ export async function shareFile(
   filename: string,
   title: string
 ): Promise<"shared" | "downloaded"> {
+  const inferredType = filename.toLowerCase().endsWith(".pdf")
+    ? "application/pdf"
+    : filename.toLowerCase().endsWith(".png")
+      ? "image/png"
+      : "application/octet-stream";
   const file = new File([blob], filename, {
-    type: blob.type || "application/octet-stream",
+    type: blob.type && blob.type !== "application/octet-stream" ? blob.type : inferredType,
   });
 
   if (typeof navigator !== "undefined" && navigator.share) {
