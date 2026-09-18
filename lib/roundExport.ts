@@ -138,11 +138,85 @@ export function generateRoundTextSummary(data: RoundExportData): string {
   return lines.join("\n");
 }
 
+/**
+ * Copy text to the clipboard.
+ * Prefers navigator.clipboard; falls back to execCommand for iOS Safari
+ * over HTTP / denied permission (common on LAN and some PWA contexts).
+ */
 export async function copyTextToClipboard(text: string): Promise<void> {
-  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through — iOS often rejects Clipboard API outside HTTPS or without gesture trust.
+    }
+  }
+
+  if (typeof document === "undefined") {
     throw new Error("Clipboard is unavailable");
   }
-  await navigator.clipboard.writeText(text);
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.setAttribute("aria-hidden", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+
+  const selection = document.getSelection();
+  const priorRange =
+    selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+    if (selection) {
+      selection.removeAllRanges();
+      if (priorRange) selection.addRange(priorRange);
+    }
+  }
+
+  if (!ok) {
+    throw new Error("Clipboard is unavailable");
+  }
+}
+
+/**
+ * Share round text: native share sheet when available (iPhone), else clipboard.
+ * Returns "shared" | "copied". AbortError (user cancel) counts as "shared"
+ * so callers do not show a false clipboard error.
+ */
+export async function shareTextSummary(
+  text: string,
+  title: string
+): Promise<"shared" | "copied"> {
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    const data: ShareData = { title, text };
+    try {
+      if (!navigator.canShare || navigator.canShare({ text })) {
+        await navigator.share(data);
+        return "shared";
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "shared";
+      }
+      // Fall through to clipboard.
+    }
+  }
+
+  await copyTextToClipboard(text);
+  return "copied";
 }
 
 export function getRoundExportFilename(data: RoundExportData, extension: string): string {
