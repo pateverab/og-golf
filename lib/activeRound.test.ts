@@ -6,6 +6,7 @@ import {
   getPlayerScoreOnHole,
   getShotLogForHole,
   isActiveRoundFullyScored,
+  pickNextUnscoredPlayer,
   withHoleOut,
   withIncrementLiveStroke,
   withLiveStrokes,
@@ -146,5 +147,20 @@ describe("shot log + lie recording", () => {
     expect(getPlayerScoreOnHole(round, "p1", 1)).toBe(3);
     expect(getLiveStrokes(round, "p1", 1)).toBe(0);
     expect(getShotLogForHole(round, "p1", 1)).toHaveLength(3);
+  });
+});
+
+describe("pickNextUnscoredPlayer", () => {
+  const ids = ["a", "b", "c"];
+  it("picks the next unscored player after the one who holed out, wrapping", () => {
+    expect(pickNextUnscoredPlayer(ids, "a", (id) => id === "a")).toBe("b");
+    expect(pickNextUnscoredPlayer(ids, "b", (id) => id === "b" || id === "c")).toBe("a");
+    expect(pickNextUnscoredPlayer(ids, "c", (id) => id === "c")).toBe("a");
+  });
+
+  it("returns null when everyone has scored the hole", () => {
+    expect(pickNextUnscoredPlayer(ids, "b", () => true)).toBeNull();
+    expect(pickNextUnscoredPlayer(["solo"], "solo", () => true)).toBeNull();
+    expect(pickNextUnscoredPlayer([], "x", () => false)).toBeNull();
   });
 });

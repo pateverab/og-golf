@@ -4,11 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useGolfStore } from "@/hooks/useGolfStore";
 import {
   withUpdatedHoleScore,
-  getPlayerScoreOnHole as readPlayerScoreOnHole,
-  getActiveTotalForPlayer as readActiveTotalForPlayer,
-  getActiveVsParForPlayer as readActiveVsParForPlayer,
   isActiveRoundFullyScored as readIsActiveRoundFullyScored,
-  getLiveStrokes as readLiveStrokes,
   withRecordedLiveStroke,
   withUndoLastLiveStroke,
   withHoleOut,
@@ -46,9 +42,7 @@ import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
-import { LiveLeaderboard } from "@/components/LiveLeaderboard";
-import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
-import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
+import { PlayHoleShell } from "@/components/PlayHoleShell";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
@@ -350,22 +344,6 @@ export default function GolfScoreTracker() {
     });
   };
 
-  const getPlayerScoreOnHole = (playerId: string, holeNumber: number): number | null => {
-    if (!activeRound) return null;
-    return readPlayerScoreOnHole(activeRound, playerId, holeNumber);
-  };
-
-
-  const getActiveTotalForPlayer = (playerId: string): number => {
-    if (!activeRound || !currentCourseForActiveRound) return 0;
-    return readActiveTotalForPlayer(activeRound, currentCourseForActiveRound, playerId);
-  };
-
-  const getActiveVsParForPlayer = (playerId: string): number => {
-    if (!activeRound || !currentCourseForActiveRound) return 0;
-    return readActiveVsParForPlayer(activeRound, currentCourseForActiveRound, playerId);
-  };
-
   const setScoreToPar = (playerId: string, holeNumber: number, par: number) => {
     updateScore(playerId, holeNumber, par);
   };
@@ -598,28 +576,56 @@ export default function GolfScoreTracker() {
     activeRound && currentCourseForActiveRound
       ? getHolesInPlay(currentCourseForActiveRound, activeRound)
       : [];
-  const activeHoleIndex = activeHolesInPlay.indexOf(currentHole);
   const activeRoundFormatLabel =
     activeRound && currentCourseForActiveRound
       ? getRoundFormatLabel(currentCourseForActiveRound, activeRound)
       : "";
 
   const isPlaySurfaceActive = Boolean(activeRound && currentCourseForActiveRound);
-  usePlaySurfaceLock(isPlaySurfaceActive);
   useScreenWakeLock(isPlaySurfaceActive);
 
-  // Solo round: a pinned quick +1 in the footer that is always under the thumb.
-  const quickStrokePlayerId =
-    activeRound && activeRound.playerIds.length === 1 ? activeRound.playerIds[0] : null;
-  const showQuickStroke =
-    quickStrokePlayerId !== null &&
-    !manualScorePlayers.includes(quickStrokePlayerId) &&
-    getPlayerScoreOnHole(quickStrokePlayerId, currentHole) === null;
+  // ========== ACTIVE ROUND: the frozen hole screen is the ONLY thing rendered ==========
+  // No header tabs, install CTA, leaderboard, scorecard, export, or footer sits
+  // under / behind it. PlayHoleShell locks html/body while mounted.
+  if (activeRound && currentCourseForActiveRound) {
+    const holeParFor = (hole: number) =>
+      currentCourseForActiveRound.holes.find((h) => h.number === hole)?.par ?? 4;
+    return (
+      <PlayHoleShell
+        activeRound={activeRound}
+        course={currentCourseForActiveRound}
+        players={players}
+        currentHole={currentHole}
+        holesInPlay={activeHolesInPlay}
+        formatLabel={activeRoundFormatLabel}
+        manualScorePlayers={manualScorePlayers}
+        onSetManual={(playerId, manual) =>
+          setManualScorePlayers((prev) =>
+            manual
+              ? prev.includes(playerId)
+                ? prev
+                : [...prev, playerId]
+              : prev.filter((id) => id !== playerId)
+          )
+        }
+        onIncrement={(playerId, lie) => incrementLiveStroke(playerId, currentHole, lie)}
+        onDecrement={(playerId) => decrementLiveStroke(playerId, currentHole)}
+        onPenalty={(playerId, lie) => penaltyLiveStroke(playerId, currentHole, lie)}
+        onHoleOut={(playerId) => holeOutLiveStroke(playerId, currentHole)}
+        onUpdateScore={(playerId, score) => updateScore(playerId, currentHole, score)}
+        onAdjustScore={(playerId, delta) => adjustScore(playerId, currentHole, delta)}
+        onSetToPar={(playerId) => setScoreToPar(playerId, currentHole, holeParFor(currentHole))}
+        onGoToHole={(hole) => setCurrentHole(hole)}
+        onSaveForLater={() => saveActiveRound(false)}
+        onFinish={() => saveActiveRound(true)}
+        onCancel={cancelActiveRound}
+      />
+    );
+  }
 
   return (
-    <div className={isPlaySurfaceActive ? "" : "min-h-screen pb-20"}>
-      {/* Top Navigation / Header (hidden while the locked play surface is up) */}
-      {!isPlaySurfaceActive && (
+    <div className="min-h-screen pb-20">
+      {/* Top Navigation / Header */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c3326]/95 backdrop-blur border-b border-golf-green-100 dark:border-[#1a4a2f]">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -662,11 +668,10 @@ export default function GolfScoreTracker() {
           </div>
         </div>
       </header>
-      )}
 
       <div className="max-w-4xl mx-auto px-5 pt-6">
                 {/* Install on iPhone — only when iOS Safari and not already standalone */}
-        {showInstallButton && !isPlaySurfaceActive && (
+        {showInstallButton && (
           <button
             onClick={() => {
               alert("📱 How to install OG Golf on your iPhone:\n\n" +
@@ -679,271 +684,6 @@ export default function GolfScoreTracker() {
             📱 Install OG Golf on iPhone
           </button>
         )}
-        {/* ========== ACTIVE ROUND SCREEN: locked full-viewport play surface ========== */}
-        {/* Fixed column (top bar, hole strip, current hole, players, prev/next). Only the
-            player/leaderboard panel scrolls vertically and the hole strip sideways; the
-            document itself never moves (see hooks/usePlaySurfaceLock.ts). */}
-        {activeRound && currentCourseForActiveRound && (
-          <div
-            className="og-play-frame bg-golf-cream text-golf-green-900 dark:bg-[#0f3d24] dark:text-golf-cream"
-            data-play-root
-          >
-            <div className="max-w-4xl w-full mx-auto flex flex-col flex-1 min-h-0 px-4">
-              {/* Top bar */}
-              <div className="shrink-0 pt-3 pb-2 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-[#c5a36f] text-[11px] font-medium tracking-wider truncate">
-                    IN PROGRESS · {activeRoundFormatLabel}
-                  </div>
-                  <div className="text-xl font-semibold truncate">{currentCourseForActiveRound.name}</div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={() => saveActiveRound(false)} className="golf-btn-secondary px-3 py-2.5 rounded-xl text-xs font-semibold">
-                    Save for Later
-                  </button>
-                  <button onClick={() => saveActiveRound(true)} className="golf-btn px-3 py-2.5 rounded-xl text-xs font-semibold">
-                    Finish
-                  </button>
-                  <button onClick={cancelActiveRound} className="px-2 py-2.5 text-xs text-red-400/80 hover:text-red-400">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-
-              {/* Hole strip: the only sideways scroller */}
-              <div
-                data-scroll-allow="x"
-                className="og-play-hstrip shrink-0 flex items-center gap-2 pb-2 -mx-1 px-1"
-              >
-              {activeHolesInPlay.map((holeNumber) => {
-                const hole = currentCourseForActiveRound.holes.find((h) => h.number === holeNumber)!;
-                const isActive = currentHole === hole.number;
-                const allPlayersHaveScore = activeRound.playerIds.every(
-                  (pid) => getPlayerScoreOnHole(pid, hole.number) !== null
-                );
-                return (
-                  <button
-                    key={hole.number}
-                    onClick={() => setCurrentHole(hole.number)}
-                    className={`min-w-[64px] px-4 py-2 rounded-2xl text-sm font-bold flex-shrink-0 border-2 transition active:scale-[0.96] ${
-                      isActive
-                        ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f] shadow-lg"
-                        : allPlayersHaveScore
-                        ? "bg-white dark:bg-[#1f4a3a] border-[#c5a36f]/40 text-[#c5a36f]"
-                        : "bg-golf-green-100 dark:bg-[#153a2a] border-golf-green-100 dark:border-[#2a5a48] text-golf-green-900 dark:text-golf-cream"
-                    }`}
-                  >
-                    <div>Hole {hole.number}</div>
-                    <div className="text-[10px] font-medium opacity-75 -mt-0.5">Par {hole.par}</div>
-                  </button>
-                );
-              })}
-              </div>
-
-              {/* Current hole header */}
-              <div className="shrink-0 flex items-center justify-between px-1 py-2">
-                <div className="text-2xl font-semibold tabular-nums flex items-baseline gap-2">
-                  Hole {currentHole}
-                  <span className="inline-block text-base font-medium px-3 py-px rounded-full bg-golf-green-100 dark:bg-[#1a4a2f] text-[#c5a36f]">
-                    Par {currentCourseForActiveRound.holes.find(h => h.number === currentHole)?.par}
-                  </span>
-                </div>
-                <div className="text-right text-xs text-[#c5a36f]">
-                  Tap <span className="font-semibold">+1 Stroke</span><br />then <span className="font-semibold">Hole Out</span>
-                </div>
-              </div>
-
-              {/* Players + leaderboard: the only vertical scroller */}
-              <div data-scroll-allow="y" className="og-play-scroll -mx-1 px-1">
-                <div className="golf-card rounded-3xl p-4">
-                  <div className="space-y-4">
-                    {activeRound.playerIds.map((playerId) => {
-                      const player = players.find((p) => p.id === playerId)!;
-                      const currentScore = getPlayerScoreOnHole(playerId, currentHole);
-                      const par = currentCourseForActiveRound.holes.find((h) => h.number === currentHole)?.par ?? 4;
-                      const roundTotal = getActiveTotalForPlayer(playerId);
-                      const roundVsPar = getActiveVsParForPlayer(playerId);
-                      const liveCount = activeRound ? readLiveStrokes(activeRound, playerId, currentHole) : 0;
-                      const showManual = manualScorePlayers.includes(playerId);
-
-                      return (
-                        <div key={playerId} className="space-y-3">
-                          <div className="flex items-baseline justify-between px-1">
-                            <div>
-                              <div className="font-semibold text-lg">{player.name}</div>
-                              {player.nickname && <div className="text-xs text-[#c5a36f]/70 -mt-0.5">“{player.nickname}”</div>}
-                            </div>
-                            <div className="text-right text-sm tabular-nums">
-                              <span className="font-medium">{roundTotal || "—"}</span>
-                              <span className={`ml-1.5 text-xs ${roundVsPar < 0 ? "text-emerald-400" : roundVsPar > 0 ? "text-red-400" : "text-[#c5a36f]"}`}>
-                                ({roundVsPar === 0 ? "E" : roundVsPar > 0 ? `+${roundVsPar}` : roundVsPar})
-                              </span>
-                            </div>
-                          </div>
-
-                          {!showManual ? (
-                            <LiveStrokeClicker
-                              playerName={player.name}
-                              holeNumber={currentHole}
-                              par={par}
-                              liveCount={liveCount}
-                              committedScore={currentScore}
-                              onIncrement={(lie) => incrementLiveStroke(playerId, currentHole, lie)}
-                              onDecrement={() => decrementLiveStroke(playerId, currentHole)}
-                              onPenalty={(lie) => penaltyLiveStroke(playerId, currentHole, lie)}
-                              onHoleOut={() => holeOutLiveStroke(playerId, currentHole)}
-                              onEditManual={() =>
-                                setManualScorePlayers((prev) =>
-                                  prev.includes(playerId) ? prev : [...prev, playerId]
-                                )
-                              }
-                            />
-                          ) : (
-                            <div className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={() => adjustScore(playerId, currentHole, -1)}
-                                  className="score-btn"
-                                  aria-label="Decrease score"
-                                >
-                                  −
-                                </button>
-
-                                <input
-                                  type="number"
-                                  inputMode="numeric"
-                                  value={currentScore ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (!isNaN(val)) updateScore(playerId, currentHole, val);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (!e.target.value) updateScore(playerId, currentHole, par);
-                                  }}
-                                  placeholder={String(par)}
-                                  className="score-input flex-1 max-w-[82px]"
-                                />
-
-                                <button
-                                  onClick={() => adjustScore(playerId, currentHole, 1)}
-                                  className="score-btn"
-                                  aria-label="Increase score"
-                                >
-                                  +
-                                </button>
-
-                                <button
-                                  onClick={() => setScoreToPar(playerId, currentHole, par)}
-                                  className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
-                                >
-                                  Set to Par
-                                </button>
-                              </div>
-
-                              <div className="mt-2 px-1 flex items-center justify-between">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setManualScorePlayers((prev) => prev.filter((id) => id !== playerId))
-                                  }
-                                  className="text-xs text-[#c5a36f]/80 underline"
-                                >
-                                  Use stroke clicker
-                                </button>
-                                {currentScore !== null && (
-                                  <span className={`text-sm font-semibold tabular-nums ${currentScore > par ? "text-red-400" : currentScore < par ? "text-emerald-400" : "text-[#c5a36f]"}`}>
-                                    This hole: {currentScore > par ? "+" : ""}{currentScore - par}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {!showManual && currentScore === null && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setManualScorePlayers((prev) =>
-                                  prev.includes(playerId) ? prev : [...prev, playerId]
-                                )
-                              }
-                              className="w-full text-xs text-[#c5a36f]/70 py-1"
-                            >
-                              Manual score instead
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-4 pb-2">
-                  <LiveLeaderboard
-                    playerIds={activeRound.playerIds}
-                    players={players}
-                    course={currentCourseForActiveRound}
-                    scores={activeRound.scores}
-                    roundConfig={activeRound}
-                  />
-                </div>
-              </div>
-
-              {/* Compact prev / next, pinned above the home indicator */}
-              <div
-                className={`shrink-0 grid gap-3 pt-2 pb-3 ${
-                  showQuickStroke ? "grid-cols-[1fr_1.4fr_1fr]" : "grid-cols-2"
-                }`}
-              >
-                <button
-                  onClick={() => {
-                    if (activeHoleIndex > 0) {
-                      setCurrentHole(activeHolesInPlay[activeHoleIndex - 1]);
-                    }
-                  }}
-                  disabled={activeHoleIndex <= 0}
-                  className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
-                >
-                  {showQuickStroke ? "← Prev" : "← Previous Hole"}
-                </button>
-                {showQuickStroke && quickStrokePlayerId && activeRound && (
-                  <button
-                    type="button"
-                    onClick={() => incrementLiveStroke(quickStrokePlayerId, currentHole)}
-                    aria-label="Quick add stroke"
-                    className="rounded-2xl bg-[#c5a36f] text-[#051b14] font-extrabold shadow-lg active:opacity-90 active:scale-[0.985] transition leading-none"
-                  >
-                    <div className="text-3xl">+1</div>
-                    <div className="text-[10px] font-semibold tracking-wider mt-1 opacity-80">
-                      LYING {readLiveStrokes(activeRound, quickStrokePlayerId, currentHole)}
-                    </div>
-                  </button>
-                )}
-                {activeHoleIndex >= 0 && activeHoleIndex === activeHolesInPlay.length - 1 ? (
-                  <button
-                    onClick={() => saveActiveRound(true)}
-                    className="py-4 text-lg font-bold rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] active:opacity-90 transition-all"
-                  >
-                    {showQuickStroke ? "Finish →" : "Finish Round →"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (activeHoleIndex >= 0 && activeHoleIndex < activeHolesInPlay.length - 1) {
-                        setCurrentHole(activeHolesInPlay[activeHoleIndex + 1]);
-                      }
-                    }}
-                    disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
-                    className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
-                  >
-                    {showQuickStroke ? "Next →" : "Next Hole →"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ========== HOME VIEW ========== */}
         {!activeRound && activeTab === "home" && (
           <>

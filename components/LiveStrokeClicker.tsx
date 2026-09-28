@@ -23,11 +23,20 @@ type LiveStrokeClickerProps = {
   onPenalty: (lie?: Lie) => void;
   onHoleOut: () => void;
   onEditManual?: () => void;
+  /** Switch this player to manual score entry for the hole (fallback). */
+  onManual?: () => void;
 };
 
+function formatVsPar(vsPar: number): string {
+  if (vsPar === 0) return "E";
+  return vsPar > 0 ? `+${vsPar}` : String(vsPar);
+}
+
 /**
- * Mid-hole live stroke counter. Optional lie chips tag where the next swing
- * starts — never required for +1 / Hole Out, never written onto HoleScore.
+ * Mid-hole live stroke counter for ONE player, sized to fit the frozen hole
+ * screen with no scrolling (every height is dvh-clamped). Optional lie chips
+ * tag where the next swing starts — never required for +1 / Hole Out, never
+ * written onto HoleScore.
  */
 export function LiveStrokeClicker({
   playerName,
@@ -40,6 +49,7 @@ export function LiveStrokeClicker({
   onPenalty,
   onHoleOut,
   onEditManual,
+  onManual,
 }: LiveStrokeClickerProps) {
   const isCommitted = committedScore !== null;
   const lying = isCommitted ? committedScore! : liveCount;
@@ -62,7 +72,7 @@ export function LiveStrokeClicker({
     }
   }, [liveCount, holeNumber, isCommitted]);
 
-  // A stroke added or undone elsewhere (e.g. the pinned quick +1) clears any pending lie.
+  // A stroke added or undone elsewhere clears any pending lie.
   useEffect(() => {
     if (!isCommitted && liveCount > 0) setSelectedLie(null);
   }, [liveCount, isCommitted]);
@@ -81,122 +91,145 @@ export function LiveStrokeClicker({
     setSelectedLie(null);
   };
 
+  if (isCommitted) {
+    return (
+      <div className="w-full max-w-md mx-auto flex flex-col justify-center gap-[clamp(8px,2dvh,20px)]">
+        <div className="text-center">
+          <div className="text-sm font-semibold truncate">{playerName}</div>
+          <div className="text-sm tracking-[0.2em] text-[#c5a36f]/80 mt-1">HOLED OUT</div>
+          <div
+            className="text-[clamp(44px,10dvh,80px)] font-bold tabular-nums leading-none mt-2"
+            data-control="committed-score"
+          >
+            {committedScore}
+          </div>
+          {vsPar !== null && (
+            <div
+              className={`text-base font-semibold mt-2 ${
+                vsPar > 0 ? "text-red-400" : vsPar < 0 ? "text-emerald-400" : "text-[#c5a36f]"
+              }`}
+            >
+              {formatVsPar(vsPar)} vs par
+            </div>
+          )}
+        </div>
+        {onEditManual && (
+          <button
+            type="button"
+            onClick={onEditManual}
+            data-control="edit-score"
+            className="w-full h-[clamp(44px,7dvh,60px)] rounded-2xl text-base font-semibold border-2 border-[#c5a36f]/50 text-[#c5a36f] active:bg-[#c5a36f]/10"
+          >
+            Edit score
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-2xl border border-[#c5a36f]/25 bg-white dark:bg-[#0c3326] p-4">
-      <div className="flex items-baseline justify-between mb-3 px-0.5">
-        <div className="font-semibold text-base">{playerName}</div>
-        <div className="text-xs text-[#c5a36f]/80">Hole {holeNumber}</div>
+    <div className="w-full max-w-md mx-auto flex flex-col justify-center gap-[clamp(4px,1.2dvh,12px)]">
+      {/* Lying / next shot in one compact row */}
+      <div className="grid grid-cols-2 gap-[clamp(6px,1.2dvh,12px)] h-[clamp(40px,8dvh,72px)]">
+        <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] px-3 flex items-center justify-between">
+          <span className="text-[11px] tracking-wider text-[#c5a36f]/80">LYING</span>
+          <span
+            className="text-[clamp(24px,4.6dvh,40px)] font-bold tabular-nums leading-none"
+            data-control="lying"
+          >
+            {lying}
+          </span>
+        </div>
+        <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] px-3 flex items-center justify-between">
+          <span className="text-[11px] tracking-wider text-[#c5a36f]/80">NEXT SHOT</span>
+          <span className="text-[clamp(24px,4.6dvh,40px)] font-bold tabular-nums leading-none text-[#c5a36f]">
+            {nextShot}
+          </span>
+        </div>
       </div>
 
-      {isCommitted ? (
-        <div className="space-y-3">
-          <div className="text-center py-2">
-            <div className="text-sm tracking-wide text-[#c5a36f]/70">HOLED OUT</div>
-            <div className="text-4xl font-bold tabular-nums mt-1">{committedScore}</div>
-            {vsPar !== null && (
-              <div
-                className={`text-sm font-semibold mt-1 ${
-                  vsPar > 0 ? "text-red-400" : vsPar < 0 ? "text-emerald-400" : "text-[#c5a36f]"
-                }`}
-              >
-                {vsPar === 0 ? "E" : vsPar > 0 ? `+${vsPar}` : vsPar} vs par
-              </div>
-            )}
-          </div>
-          {onEditManual && (
+      {/* Optional lie chips */}
+      <div className="grid grid-cols-3 gap-[clamp(4px,0.9dvh,8px)]" role="group" aria-label="Lie (optional)">
+        {LIE_OPTIONS.map((opt) => {
+          const active = selectedLie === opt.id;
+          return (
             <button
+              key={opt.id}
               type="button"
-              onClick={onEditManual}
-              className="w-full py-3 rounded-xl text-sm font-semibold border border-[#c5a36f]/40 text-[#c5a36f] active:bg-[#c5a36f]/10"
+              onClick={() => toggleLie(opt.id)}
+              aria-pressed={active}
+              data-control={`lie-${opt.id}`}
+              className={`h-[clamp(34px,6dvh,52px)] rounded-xl text-[clamp(13px,2dvh,16px)] font-semibold border-2 transition active:scale-[0.97] ${
+                active
+                  ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
+                  : "bg-white dark:bg-[#0a2e1f] text-[#c5a36f] border-[#c5a36f]/35"
+              }`}
             >
-              Edit score
+              {opt.label}
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] py-3 px-2">
-              <div className="text-[11px] tracking-wider text-[#c5a36f]/70">LYING</div>
-              <div className="text-3xl font-bold tabular-nums mt-0.5">{lying}</div>
-            </div>
-            <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] py-3 px-2">
-              <div className="text-[11px] tracking-wider text-[#c5a36f]/70">NEXT SHOT</div>
-              <div className="text-3xl font-bold tabular-nums mt-0.5 text-[#c5a36f]">{nextShot}</div>
-            </div>
-          </div>
+          );
+        })}
+      </div>
 
-          <div>
-            <div className="text-[10px] tracking-wider text-[#c5a36f]/70 mb-1.5 px-0.5">
-              LIE (OPTIONAL)
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {LIE_OPTIONS.map((opt) => {
-                const active = selectedLie === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => toggleLie(opt.id)}
-                    className={`py-3 rounded-xl text-sm font-semibold border-2 transition active:scale-[0.97] ${
-                      active
-                        ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
-                        : "bg-white dark:bg-[#0a2e1f] text-[#c5a36f] border-[#c5a36f]/35"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+      {/* Thumb zone: one huge +1, then undo / penalty, then Hole Out. */}
+      <button
+        type="button"
+        onClick={handleIncrement}
+        aria-label="Add stroke"
+        data-control="plus1"
+        className="w-full h-[clamp(64px,12dvh,104px)] rounded-3xl bg-[#c5a36f] text-[#051b14] text-[clamp(24px,4.4dvh,36px)] font-extrabold tracking-wide shadow-lg active:opacity-90 active:scale-[0.985] transition"
+      >
+        +1 Stroke
+      </button>
 
-          {/* Thumb zone: one huge +1, then the smaller undo / penalty row, then Hole Out. */}
+      <div className="grid grid-cols-2 gap-[clamp(6px,1.2dvh,12px)]">
+        <button
+          type="button"
+          onClick={onDecrement}
+          disabled={liveCount <= 0}
+          aria-label="Undo last stroke"
+          data-control="undo"
+          className="h-[clamp(44px,7.5dvh,64px)] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 disabled:opacity-40 transition"
+        >
+          − Undo
+        </button>
+        <button
+          type="button"
+          onClick={handlePenalty}
+          aria-label="Add penalty stroke"
+          data-control="penalty"
+          className="h-[clamp(44px,7.5dvh,64px)] rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
+        >
+          +1 Penalty
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onHoleOut}
+        disabled={!canHoleOut}
+        data-control="holeout"
+        className="w-full h-[clamp(48px,8dvh,68px)] rounded-2xl border-2 border-[#c5a36f] bg-[#0a2e1f] text-[#c5a36f] text-lg font-bold tracking-wide active:bg-[#c5a36f] active:text-[#051b14] disabled:opacity-40 disabled:active:bg-[#0a2e1f] disabled:active:text-[#c5a36f] transition"
+      >
+        HOLE OUT{liveCount > 0 ? ` · ${liveCount}` : ""}
+      </button>
+
+      <div className="flex items-center justify-between gap-2 h-[clamp(22px,3.6dvh,32px)] px-0.5 text-xs">
+        <span className="min-w-0 truncate text-[#c5a36f]/80 tabular-nums">
+          {playerName}
+          {vsPar !== null && liveCount > 0 ? ` · live ${formatVsPar(vsPar)}` : ""}
+        </span>
+        {onManual && (
           <button
             type="button"
-            onClick={handleIncrement}
-            aria-label="Add stroke"
-            className="w-full h-[96px] rounded-3xl bg-[#c5a36f] text-[#051b14] text-3xl font-extrabold tracking-wide shadow-lg active:opacity-90 active:scale-[0.985] transition"
+            onClick={onManual}
+            data-control="manual"
+            className="shrink-0 h-full px-2 text-[#c5a36f]/80 underline underline-offset-2"
           >
-            +1 Stroke
+            Manual score
           </button>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={onDecrement}
-              disabled={liveCount <= 0}
-              aria-label="Undo last stroke"
-              className="h-[60px] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 disabled:opacity-40 transition"
-            >
-              − Undo
-            </button>
-            <button
-              type="button"
-              onClick={handlePenalty}
-              aria-label="Add penalty stroke"
-              className="h-[60px] rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
-            >
-              +1 Penalty
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onHoleOut}
-            disabled={!canHoleOut}
-            className="w-full h-[64px] rounded-2xl border-2 border-[#c5a36f] bg-[#0a2e1f] text-[#c5a36f] text-lg font-bold tracking-wide active:bg-[#c5a36f] active:text-[#051b14] disabled:opacity-40 disabled:active:bg-[#0a2e1f] disabled:active:text-[#c5a36f] transition"
-          >
-            HOLE OUT{liveCount > 0 ? ` · ${liveCount}` : ""}
-          </button>
-
-          {vsPar !== null && liveCount > 0 && (
-            <div className="text-center text-xs text-[#c5a36f]/70 tabular-nums">
-              Live vs par: {vsPar === 0 ? "E" : vsPar > 0 ? `+${vsPar}` : vsPar}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

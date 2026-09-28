@@ -12,13 +12,14 @@ All data is stored locally in your browser using localStorage. No accounts, no s
 - Add, edit, view, and delete players
 - Automatic handicap / OG index calculation based on rounds played
 - Start rounds with one or more players (18 holes, or front / back 9, any starting hole)
-- Live stroke clicker per player: a huge **+1 Stroke** in the thumb zone, Undo, **+1 Penalty**, and **Hole Out**, which commits the score and moves to the next hole once everyone is in
-- Solo rounds get a pinned quick **+1** between Prev and Next, always under your thumb
+- Live stroke clicker, one player at a time: a huge **+1 Stroke** in the thumb zone, Undo, **+1 Penalty**, and **Hole Out**, which commits the score, jumps to the next player who hasn't scored, and moves to the next hole once everyone is in
+- Player chips on multiplayer rounds show each player's live / holed-out state; tap one to switch whose clicker is shown
 - Optional lie chips (Tee, Fairway, Rough, Bunker, Green, Other) tagged on each shot
-- Manual score entry as a fallback on any hole
-- Locked on-course screen on iPhone: while a round is active the hole screen never slides, pans, rubber-bands, or pulls to refresh; only the player / leaderboard panel scrolls
+- Manual score entry as a fallback on any hole (fits in the same clicker area)
+- Frozen hole screen on iPhone: during a round the hole view is one fixed, screen-sized frame (top bar, player chips, clicker, Prev / Next) with zero scrolling. It never slides, pans, rubber-bands, pinches, or pulls to refresh, and holes change only with the Prev / Next buttons
+- **Card** button opens a contained overlay with the live leaderboard and a hole-by-hole score grid (tap a hole to jump to it); it is the only thing on the play view that scrolls
 - Keeps the screen awake during a round where the browser supports it (Screen Wake Lock)
-- Live leaderboard during the round (total, vs par, position)
+- Live leaderboard during the round (total, vs par, position), inside the Card overlay
 - Complete round history with official scorecard marks (circles for under par, squares for over par)
 - Player stats with handicap trends over time
 - Round export: PDF download, image share, and text “Share a Copy” (with clipboard fallbacks)
