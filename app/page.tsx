@@ -49,6 +49,7 @@ import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { LiveLeaderboard } from "@/components/LiveLeaderboard";
 import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
 import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
+import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
   getTestDataSuccessMessage,
@@ -605,6 +606,15 @@ export default function GolfScoreTracker() {
 
   const isPlaySurfaceActive = Boolean(activeRound && currentCourseForActiveRound);
   usePlaySurfaceLock(isPlaySurfaceActive);
+  useScreenWakeLock(isPlaySurfaceActive);
+
+  // Solo round: a pinned quick +1 in the footer that is always under the thumb.
+  const quickStrokePlayerId =
+    activeRound && activeRound.playerIds.length === 1 ? activeRound.playerIds[0] : null;
+  const showQuickStroke =
+    quickStrokePlayerId !== null &&
+    !manualScorePlayers.includes(quickStrokePlayerId) &&
+    getPlayerScoreOnHole(quickStrokePlayerId, currentHole) === null;
 
   return (
     <div className={isPlaySurfaceActive ? "" : "min-h-screen pb-20"}>
@@ -880,7 +890,11 @@ export default function GolfScoreTracker() {
               </div>
 
               {/* Compact prev / next, pinned above the home indicator */}
-              <div className="shrink-0 grid grid-cols-2 gap-3 pt-2 pb-3">
+              <div
+                className={`shrink-0 grid gap-3 pt-2 pb-3 ${
+                  showQuickStroke ? "grid-cols-[1fr_1.4fr_1fr]" : "grid-cols-2"
+                }`}
+              >
                 <button
                   onClick={() => {
                     if (activeHoleIndex > 0) {
@@ -890,14 +904,27 @@ export default function GolfScoreTracker() {
                   disabled={activeHoleIndex <= 0}
                   className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
-                  ← Previous Hole
+                  {showQuickStroke ? "← Prev" : "← Previous Hole"}
                 </button>
+                {showQuickStroke && quickStrokePlayerId && activeRound && (
+                  <button
+                    type="button"
+                    onClick={() => incrementLiveStroke(quickStrokePlayerId, currentHole)}
+                    aria-label="Quick add stroke"
+                    className="rounded-2xl bg-[#c5a36f] text-[#051b14] font-extrabold shadow-lg active:opacity-90 active:scale-[0.985] transition leading-none"
+                  >
+                    <div className="text-3xl">+1</div>
+                    <div className="text-[10px] font-semibold tracking-wider mt-1 opacity-80">
+                      LYING {readLiveStrokes(activeRound, quickStrokePlayerId, currentHole)}
+                    </div>
+                  </button>
+                )}
                 {activeHoleIndex >= 0 && activeHoleIndex === activeHolesInPlay.length - 1 ? (
                   <button
                     onClick={() => saveActiveRound(true)}
                     className="py-4 text-lg font-bold rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] active:opacity-90 transition-all"
                   >
-                    Finish Round →
+                    {showQuickStroke ? "Finish →" : "Finish Round →"}
                   </button>
                 ) : (
                   <button
@@ -909,7 +936,7 @@ export default function GolfScoreTracker() {
                     disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
                     className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                   >
-                    Next Hole →
+                    {showQuickStroke ? "Next →" : "Next Hole →"}
                   </button>
                 )}
               </div>
