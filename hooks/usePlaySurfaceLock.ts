@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import {
   PLAY_LOCK_CLASS,
   SCROLL_ALLOW_SELECTOR,
+  SCROLL_AXIS_ATTR,
+  parseScrollAxis,
   shouldBlockTouchMove,
   shouldResetDocumentScroll,
 } from "@/lib/scrollLock";
@@ -16,8 +18,10 @@ function isTyping(): boolean {
 /**
  * Freezes the document while the hole screen (PlayHoleShell) is mounted:
  * no vertical / horizontal scroll, no rubber-band, no pull-to-refresh, no pan,
- * no pinch. Only `[data-og-scroll="1"]` scrollers (the Card overlay) may move,
- * and only while they have room in the drag direction.
+ * no pinch. Only `[data-og-scroll="1"]` scrollers (the Card overlay, modals,
+ * and the horizontal hole strip) may move, only along their axis
+ * (`data-og-scroll-axis`, default vertical), and only while they have room in
+ * the drag direction.
  *
  * On unmount every listener and the lock class are removed and the previous
  * scroll position is restored, so Courses / History / Stats scroll again.
@@ -73,6 +77,7 @@ export function usePlaySurfaceLock(active: boolean = true) {
           : null,
         dx,
         dy,
+        axis: parseScrollAxis(scrollerEl?.getAttribute(SCROLL_AXIS_ATTR)),
       });
       if (block && e.cancelable) e.preventDefault();
     };

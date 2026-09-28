@@ -48,6 +48,7 @@ import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { PlayHoleShell } from "@/components/PlayHoleShell";
 import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
+import { canAddStroke } from "@/lib/lies";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
   getTestDataSuccessMessage,
@@ -327,6 +328,8 @@ export default function GolfScoreTracker() {
   };
 
   const incrementLiveStroke = (playerId: string, holeNumber: number, lie?: Lie) => {
+    // +1 Stroke always carries a lie (Penalty / Undo / Hole Out never need one).
+    if (!canAddStroke(lie)) return;
     setActiveRound((prev) =>
       prev ? withRecordedLiveStroke(prev, playerId, holeNumber, { lie }) : prev
     );

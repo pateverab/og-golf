@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   SCROLL_ALLOW_SELECTOR,
+  SCROLL_AXIS_ATTR,
   isScrollAllowed,
+  parseScrollAxis,
   shouldAllowTouchScroll,
   shouldBlockTouchMove,
   shouldResetDocumentScroll,
@@ -73,6 +75,49 @@ describe("shouldBlockTouchMove", () => {
     expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(0), dx: 0, dy: 10 })).toBe(true);
     expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(600), dx: 0, dy: -10 })).toBe(true);
     expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(300), dx: 25, dy: 1 })).toBe(true);
+  });
+});
+
+// Hole strip: 20 cells wide, one window visible, scrolled somewhere in the middle.
+const strip = (scrollLeft: number): ScrollMetrics => ({
+  scrollTop: 0,
+  scrollHeight: 70,
+  clientHeight: 70,
+  scrollLeft,
+  scrollWidth: 1800,
+  clientWidth: 360,
+});
+
+describe("parseScrollAxis", () => {
+  it("defaults to vertical and accepts x / both", () => {
+    expect(SCROLL_AXIS_ATTR).toBe("data-og-scroll-axis");
+    expect(parseScrollAxis("x")).toBe("x");
+    expect(parseScrollAxis("both")).toBe("both");
+    expect(parseScrollAxis("y")).toBe("y");
+    expect(parseScrollAxis(null)).toBe("y");
+    expect(parseScrollAxis("sideways")).toBe("y");
+  });
+});
+
+describe("shouldBlockTouchMove on the horizontal hole strip", () => {
+  it("lets a sideways drag move the strip while it has room", () => {
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(600), dx: -20, dy: 2, axis: "x" })).toBe(false);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(600), dx: 20, dy: -3, axis: "x" })).toBe(false);
+  });
+
+  it("blocks vertical drags on the strip (no page scroll / rubber-band)", () => {
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(600), dx: 2, dy: 30, axis: "x" })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(600), dx: 0, dy: -30, axis: "x" })).toBe(true);
+  });
+
+  it("blocks a sideways drag past either end so it never chains into the page", () => {
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(0), dx: 20, dy: 0, axis: "x" })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(1440), dx: -20, dy: 0, axis: "x" })).toBe(true);
+  });
+
+  it("still blocks pinch on the strip, and vertical scrollers ignore sideways drags", () => {
+    expect(shouldBlockTouchMove({ touchCount: 2, scroller: strip(600), dx: -20, dy: 0, axis: "x" })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: strip(600), dx: -20, dy: 0 })).toBe(true);
   });
 });
 
