@@ -62,6 +62,11 @@ export function LiveStrokeClicker({
     }
   }, [liveCount, holeNumber, isCommitted]);
 
+  // A stroke added or undone elsewhere (e.g. the pinned quick +1) clears any pending lie.
+  useEffect(() => {
+    if (!isCommitted && liveCount > 0) setSelectedLie(null);
+  }, [liveCount, isCommitted]);
+
   const toggleLie = (lie: Lie) => {
     setSelectedLie((prev) => (prev === lie ? null : lie));
   };
@@ -121,36 +126,6 @@ export function LiveStrokeClicker({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onDecrement}
-              disabled={liveCount <= 0}
-              aria-label="Undo last stroke"
-              className="score-btn disabled:opacity-40"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              onClick={handleIncrement}
-              aria-label="Add stroke"
-              className="flex-1 h-[68px] rounded-2xl bg-[#c5a36f] text-[#051b14] text-xl font-bold active:opacity-90 active:scale-[0.985] transition"
-            >
-              +1 Stroke
-            </button>
-            <button
-              type="button"
-              onClick={handlePenalty}
-              aria-label="Add penalty stroke"
-              className="h-[68px] px-3 rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-sm font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
-            >
-              +1
-              <br />
-              Penalty
-            </button>
-          </div>
-
           <div>
             <div className="text-[10px] tracking-wider text-[#c5a36f]/70 mb-1.5 px-0.5">
               LIE (OPTIONAL)
@@ -174,6 +149,36 @@ export function LiveStrokeClicker({
                 );
               })}
             </div>
+          </div>
+
+          {/* Thumb zone: one huge +1, then the smaller undo / penalty row, then Hole Out. */}
+          <button
+            type="button"
+            onClick={handleIncrement}
+            aria-label="Add stroke"
+            className="w-full h-[96px] rounded-3xl bg-[#c5a36f] text-[#051b14] text-3xl font-extrabold tracking-wide shadow-lg active:opacity-90 active:scale-[0.985] transition"
+          >
+            +1 Stroke
+          </button>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={onDecrement}
+              disabled={liveCount <= 0}
+              aria-label="Undo last stroke"
+              className="h-[60px] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 disabled:opacity-40 transition"
+            >
+              − Undo
+            </button>
+            <button
+              type="button"
+              onClick={handlePenalty}
+              aria-label="Add penalty stroke"
+              className="h-[60px] rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
+            >
+              +1 Penalty
+            </button>
           </div>
 
           <button
