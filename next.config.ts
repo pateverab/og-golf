@@ -21,6 +21,9 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Verification builds go to a separate folder (e.g. NEXT_DIST_DIR=.next-verify npm run build)
+  // so they never overwrite the .next folder a running `next dev` is using.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 
 export default withSerwist(nextConfig);
