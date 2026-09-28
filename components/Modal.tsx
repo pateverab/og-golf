@@ -37,7 +37,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
         </div>
 
         <div
-          data-scroll-allow="y"
+          data-og-scroll="1"
           className="flex-1 overflow-y-auto overscroll-contain p-5 pb-6 space-y-5 text-golf-green-900 dark:text-golf-cream
                      [-webkit-overflow-scrolling:touch] touch-pan-y"
         >

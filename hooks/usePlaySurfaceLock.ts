@@ -3,24 +3,34 @@
 import { useEffect } from "react";
 import {
   PLAY_LOCK_CLASS,
-  SCROLL_ALLOW_ATTR,
-  parseScrollAxis,
-  shouldAllowTouchScroll,
+  SCROLL_ALLOW_SELECTOR,
+  shouldBlockTouchMove,
+  shouldResetDocumentScroll,
 } from "@/lib/scrollLock";
 
+function isTyping(): boolean {
+  const el = typeof document !== "undefined" ? document.activeElement : null;
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+}
+
 /**
- * Locks the document while the active-round (hole / live clicker) view is
- * mounted: no page scroll, no horizontal pan, no pull-to-refresh, no
- * rubber-banding, no pinch-pan. Only `[data-scroll-allow]` inner scrollers may
- * move. Everything is restored on unmount so courses / history / stats scroll
- * normally again.
+ * Freezes the document while the hole screen (PlayHoleShell) is mounted:
+ * no vertical / horizontal scroll, no rubber-band, no pull-to-refresh, no pan,
+ * no pinch. Only `[data-og-scroll="1"]` scrollers (the Card overlay) may move,
+ * and only while they have room in the drag direction.
+ *
+ * On unmount every listener and the lock class are removed and the previous
+ * scroll position is restored, so Courses / History / Stats scroll again.
  */
-export function usePlaySurfaceLock(active: boolean) {
+export function usePlaySurfaceLock(active: boolean = true) {
   useEffect(() => {
     if (!active || typeof document === "undefined") return;
 
     const html = document.documentElement;
     const body = document.body;
+    const prevX = window.scrollX;
+    const prevY = window.scrollY;
+
     html.classList.add(PLAY_LOCK_CLASS);
     body.classList.add(PLAY_LOCK_CLASS);
     window.scrollTo(0, 0);
@@ -29,6 +39,7 @@ export function usePlaySurfaceLock(active: boolean) {
     let lastY = 0;
 
     const onTouchStart = (e: TouchEvent) => {
+      // Passive on purpose: never cancel a tap (two thumbs tapping +1 must both count).
       if (e.touches.length === 1) {
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
@@ -36,59 +47,50 @@ export function usePlaySurfaceLock(active: boolean) {
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      // Two+ fingers: never let the page pinch or pan.
-      if (e.touches.length > 1) {
-        if (e.cancelable) e.preventDefault();
-        return;
-      }
       const touch = e.touches[0];
-      if (!touch) return;
-      const dx = touch.clientX - lastX;
-      const dy = touch.clientY - lastY;
-      lastX = touch.clientX;
-      lastY = touch.clientY;
+      let dx = 0;
+      let dy = 0;
+      if (touch && e.touches.length === 1) {
+        dx = touch.clientX - lastX;
+        dy = touch.clientY - lastY;
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+      }
 
       const target = e.target instanceof Element ? e.target : null;
-      const scroller = target?.closest<HTMLElement>(`[${SCROLL_ALLOW_ATTR}]`) ?? null;
-      if (scroller) {
-        const axis = parseScrollAxis(scroller.getAttribute(SCROLL_ALLOW_ATTR));
-        if (
-          axis &&
-          shouldAllowTouchScroll(
-            {
-              scrollTop: scroller.scrollTop,
-              scrollHeight: scroller.scrollHeight,
-              clientHeight: scroller.clientHeight,
-              scrollLeft: scroller.scrollLeft,
-              scrollWidth: scroller.scrollWidth,
-              clientWidth: scroller.clientWidth,
-            },
-            axis,
-            dx,
-            dy
-          )
-        ) {
-          return;
-        }
-      }
-      if (e.cancelable) e.preventDefault();
+      const scrollerEl = target?.closest<HTMLElement>(SCROLL_ALLOW_SELECTOR) ?? null;
+      const block = shouldBlockTouchMove({
+        touchCount: e.touches.length,
+        scroller: scrollerEl
+          ? {
+              scrollTop: scrollerEl.scrollTop,
+              scrollHeight: scrollerEl.scrollHeight,
+              clientHeight: scrollerEl.clientHeight,
+              scrollLeft: scrollerEl.scrollLeft,
+              scrollWidth: scrollerEl.scrollWidth,
+              clientWidth: scrollerEl.clientWidth,
+            }
+          : null,
+        dx,
+        dy,
+      });
+      if (block && e.cancelable) e.preventDefault();
     };
 
-    // iOS Safari pinch gestures.
+    // iOS Safari pinch / rotate gestures.
     const onGesture = (e: Event) => {
       if (e.cancelable) e.preventDefault();
     };
 
-    // Rotation / toolbar changes must never leave the document offset.
-    // Skipped while typing so iOS can still lift a focused input above the keyboard.
-    const resetScroll = () => {
-      const el = document.activeElement;
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
-      if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    // Any document offset (address-bar bounce, rotation, focus jump) snaps back.
+    const onScroll = () => {
+      if (shouldResetDocumentScroll(window.scrollX, window.scrollY, isTyping())) {
+        window.scrollTo(0, 0);
+      }
     };
-    const resetAfterRotate = () => {
-      resetScroll();
-      window.setTimeout(resetScroll, 350);
+    const onViewportChange = () => {
+      onScroll();
+      window.setTimeout(onScroll, 350);
     };
 
     const nonPassive: AddEventListenerOptions = { passive: false };
@@ -96,16 +98,24 @@ export function usePlaySurfaceLock(active: boolean) {
     document.addEventListener("touchmove", onTouchMove, nonPassive);
     document.addEventListener("gesturestart", onGesture, nonPassive);
     document.addEventListener("gesturechange", onGesture, nonPassive);
-    window.addEventListener("orientationchange", resetAfterRotate);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("orientationchange", onViewportChange);
+    window.addEventListener("resize", onViewportChange);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", onViewportChange);
 
     return () => {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove, nonPassive);
       document.removeEventListener("gesturestart", onGesture, nonPassive);
       document.removeEventListener("gesturechange", onGesture, nonPassive);
-      window.removeEventListener("orientationchange", resetAfterRotate);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("orientationchange", onViewportChange);
+      window.removeEventListener("resize", onViewportChange);
+      vv?.removeEventListener("resize", onViewportChange);
       html.classList.remove(PLAY_LOCK_CLASS);
       body.classList.remove(PLAY_LOCK_CLASS);
+      window.scrollTo(prevX, prevY);
     };
   }, [active]);
 }

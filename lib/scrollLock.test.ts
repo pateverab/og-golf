@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseScrollAxis, shouldAllowTouchScroll, type ScrollMetrics } from "./scrollLock";
+import {
+  SCROLL_ALLOW_SELECTOR,
+  isScrollAllowed,
+  shouldAllowTouchScroll,
+  shouldBlockTouchMove,
+  shouldResetDocumentScroll,
+  type ScrollMetrics,
+} from "./scrollLock";
 
 const list = (scrollTop: number): ScrollMetrics => ({
   scrollTop,
@@ -10,23 +17,14 @@ const list = (scrollTop: number): ScrollMetrics => ({
   clientWidth: 300,
 });
 
-const strip = (scrollLeft: number): ScrollMetrics => ({
-  scrollTop: 0,
-  scrollHeight: 80,
-  clientHeight: 80,
-  scrollLeft,
-  scrollWidth: 1200,
-  clientWidth: 360,
-});
-
-describe("parseScrollAxis", () => {
-  it("accepts x, y, both and defaults empty to y", () => {
-    expect(parseScrollAxis("x")).toBe("x");
-    expect(parseScrollAxis("y")).toBe("y");
-    expect(parseScrollAxis("both")).toBe("both");
-    expect(parseScrollAxis("")).toBe("y");
-    expect(parseScrollAxis(null)).toBeNull();
-    expect(parseScrollAxis("nope")).toBeNull();
+describe("isScrollAllowed", () => {
+  it("only accepts the exact opt-in value", () => {
+    expect(SCROLL_ALLOW_SELECTOR).toBe('[data-og-scroll="1"]');
+    expect(isScrollAllowed("1")).toBe(true);
+    expect(isScrollAllowed("")).toBe(false);
+    expect(isScrollAllowed("y")).toBe(false);
+    expect(isScrollAllowed(null)).toBe(false);
+    expect(isScrollAllowed(undefined)).toBe(false);
   });
 });
 
@@ -49,20 +47,43 @@ describe("shouldAllowTouchScroll", () => {
     expect(shouldAllowTouchScroll(list(300), "y", 20, 2)).toBe(false);
   });
 
-  it("blocks vertical drags on a content that does not overflow", () => {
+  it("blocks vertical drags on content that does not overflow", () => {
     const short: ScrollMetrics = { ...list(0), scrollHeight: 400 };
     expect(shouldAllowTouchScroll(short, "y", 0, -12)).toBe(false);
   });
 
-  it("allows the horizontal hole strip to scroll sideways only", () => {
-    expect(shouldAllowTouchScroll(strip(100), "x", 15, 1)).toBe(true);
-    expect(shouldAllowTouchScroll(strip(100), "x", -15, 1)).toBe(true);
-    expect(shouldAllowTouchScroll(strip(100), "x", 1, 15)).toBe(false);
-    expect(shouldAllowTouchScroll(strip(0), "x", 15, 1)).toBe(false);
-    expect(shouldAllowTouchScroll(strip(840), "x", -15, 1)).toBe(false);
-  });
-
   it("treats a zero-length move as allowed", () => {
     expect(shouldAllowTouchScroll(list(0), "y", 0, 0)).toBe(true);
+  });
+});
+
+describe("shouldBlockTouchMove", () => {
+  it("always blocks multi-touch (pinch / two-finger pan)", () => {
+    expect(shouldBlockTouchMove({ touchCount: 2, scroller: list(300), dx: 0, dy: -10 })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 3, scroller: null, dx: 0, dy: 0 })).toBe(true);
+  });
+
+  it("blocks every single-finger drag outside an opted-in scroller", () => {
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: null, dx: 0, dy: 40 })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: null, dx: -40, dy: 0 })).toBe(true);
+  });
+
+  it("lets the overlay scroller move only while it has room", () => {
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(0), dx: 0, dy: -10 })).toBe(false);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(0), dx: 0, dy: 10 })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(600), dx: 0, dy: -10 })).toBe(true);
+    expect(shouldBlockTouchMove({ touchCount: 1, scroller: list(300), dx: 25, dy: 1 })).toBe(true);
+  });
+});
+
+describe("shouldResetDocumentScroll", () => {
+  it("snaps any document offset back to the origin", () => {
+    expect(shouldResetDocumentScroll(0, 120, false)).toBe(true);
+    expect(shouldResetDocumentScroll(8, 0, false)).toBe(true);
+    expect(shouldResetDocumentScroll(0, 0, false)).toBe(false);
+  });
+
+  it("leaves the document alone while a text field is focused", () => {
+    expect(shouldResetDocumentScroll(0, 200, true)).toBe(false);
   });
 });

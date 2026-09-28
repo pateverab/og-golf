@@ -238,3 +238,23 @@ export function withUndoLastLiveStroke(
   }
   return withPlayerShotLog(decremented, playerId, logs);
 }
+
+/**
+ * After a player holes out, who should the hole screen show next? The next
+ * player (in round order, wrapping) who has not scored this hole yet, or null
+ * when everyone is in (the hole then auto-advances).
+ */
+export function pickNextUnscoredPlayer(
+  playerIds: string[],
+  currentId: string,
+  isScored: (playerId: string) => boolean
+): string | null {
+  const n = playerIds.length;
+  if (n === 0) return null;
+  const start = Math.max(0, playerIds.indexOf(currentId));
+  for (let step = 1; step <= n; step++) {
+    const pid = playerIds[(start + step) % n];
+    if (pid !== currentId && !isScored(pid)) return pid;
+  }
+  return null;
+}
