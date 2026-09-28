@@ -7,10 +7,12 @@ import {
   getActiveVsParForPlayer,
   getLiveStrokes,
   getPlayerScoreOnHole,
+  getStartingHoleForRound,
   pickNextUnscoredPlayer,
 } from "@/lib/activeRound";
 import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
 import { PlayCardOverlay } from "@/components/PlayCardOverlay";
+import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
 
 export interface PlayHoleShellProps {
@@ -30,9 +32,14 @@ export interface PlayHoleShellProps {
   onAdjustScore: (playerId: string, delta: number) => void;
   onSetToPar: (playerId: string) => void;
   onGoToHole: (hole: number) => void;
-  onSaveForLater: () => void;
+  /** Finish Round (Next on the last hole). */
   onFinish: () => void;
-  onCancel: () => void;
+  /** Quit → Save and continue later: keep the round, park it on Home. */
+  onPause: () => void;
+  /** Quit → Start this round again (already confirmed in the modal). */
+  onRestart: () => void;
+  /** Quit → Quit and delete (already confirmed in the modal). */
+  onDelete: () => void;
 }
 
 function formatVsPar(vsPar: number): string {
@@ -68,9 +75,10 @@ export function PlayHoleShell({
   onAdjustScore,
   onSetToPar,
   onGoToHole,
-  onSaveForLater,
   onFinish,
-  onCancel,
+  onPause,
+  onRestart,
+  onDelete,
 }: PlayHoleShellProps) {
   usePlaySurfaceLock(true);
 
@@ -85,7 +93,7 @@ export function PlayHoleShell({
 
   const [selectedId, setSelectedId] = useState<string>(() => firstUnscored());
   const [cardOpen, setCardOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [quitOpen, setQuitOpen] = useState(false);
 
   // New hole → first player who still needs a score on it.
   useEffect(() => {
@@ -119,9 +127,12 @@ export function PlayHoleShell({
     if (holeIndex >= 0 && holeIndex < holesInPlay.length - 1) onGoToHole(holesInPlay[holeIndex + 1]);
   };
 
-  const menuAction = (fn: () => void) => () => {
-    setMenuOpen(false);
-    fn();
+  const handleRestart = () => {
+    setQuitOpen(false);
+    onRestart();
+    // Same hole may stay current (restart from hole 1 on hole 1): reset explicitly.
+    setSelectedId(playerIds[0]);
+    setCardOpen(false);
   };
 
   return (
@@ -129,7 +140,7 @@ export function PlayHoleShell({
       className="og-play-shell bg-golf-cream text-golf-green-900 dark:bg-[#0f3d24] dark:text-golf-cream"
       data-play-root
     >
-      {/* Top bar: course, hole, par, Card, round menu (Part 2: Quit) */}
+      {/* Top bar: course, hole, par, Card, Quit */}
       <header className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(4px,1dvh,10px)] pb-[clamp(4px,1dvh,8px)] flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-medium tracking-wider text-[#c5a36f] truncate">
@@ -157,49 +168,14 @@ export function PlayHoleShell({
         >
           Card
         </button>
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Round menu"
-            aria-expanded={menuOpen}
-            data-control="menu"
-            className="h-[clamp(40px,6.5dvh,48px)] w-[clamp(40px,6.5dvh,48px)] rounded-xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-xl font-bold leading-none active:bg-[#c5a36f]/15"
-          >
-            ⋯
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-              <div className="absolute right-0 top-full mt-2 z-40 w-52 rounded-2xl border border-[#c5a36f]/40 bg-white dark:bg-[#0c3326] shadow-2xl p-2 flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={menuAction(onSaveForLater)}
-                  data-control="save-later"
-                  className="h-12 rounded-xl text-left px-3 font-semibold golf-btn-secondary"
-                >
-                  Save for later
-                </button>
-                <button
-                  type="button"
-                  onClick={menuAction(onFinish)}
-                  data-control="finish"
-                  className="h-12 rounded-xl text-left px-3 font-semibold golf-btn"
-                >
-                  Finish round
-                </button>
-                <button
-                  type="button"
-                  onClick={menuAction(onCancel)}
-                  data-control="cancel-round"
-                  className="h-12 rounded-xl text-left px-3 font-semibold text-red-400 active:bg-red-400/10"
-                >
-                  Cancel round
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setQuitOpen(true)}
+          data-control="quit"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3.5 rounded-xl border-2 border-red-400/60 text-red-400 text-sm font-bold active:bg-red-500/10"
+        >
+          Quit
+        </button>
       </header>
 
       {/* Player chips (multiplayer): tap to switch whose clicker is shown */}
@@ -370,6 +346,23 @@ export function PlayHoleShell({
           </button>
         )}
       </footer>
+
+      <QuitRoundModal
+        open={quitOpen}
+        courseName={course.name}
+        currentHole={currentHole}
+        startingHole={getStartingHoleForRound(course, activeRound)}
+        onClose={() => setQuitOpen(false)}
+        onSaveForLater={() => {
+          setQuitOpen(false);
+          onPause();
+        }}
+        onRestart={handleRestart}
+        onDelete={() => {
+          setQuitOpen(false);
+          onDelete();
+        }}
+      />
 
       {cardOpen && (
         <PlayCardOverlay

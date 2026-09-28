@@ -1,4 +1,4 @@
-import type { ActiveRound, Course, HoleScore, Lie, ShotLog } from "@/lib/types";
+import type { ActiveRound, Course, HoleScore, Lie, Round, ShotLog } from "@/lib/types";
 import { getHolesInPlay } from "@/lib/calculations";
 
 /** Clamp stroke entry to a sensible on-course range. */
@@ -257,4 +257,39 @@ export function pickNextUnscoredPlayer(
     if (pid !== currentId && !isScored(pid)) return pid;
   }
   return null;
+}
+
+/** First hole of the round as configured (hole 1, hole 10, or the back nine). */
+export function getStartingHoleForRound(course: Course, round: ActiveRound): number {
+  return getHolesInPlay(course, round)[0] ?? round.startingHole ?? 1;
+}
+
+/**
+ * "Start this round again": wipe every score, live tap, and shot-log entry and
+ * go back to the configured starting hole, keeping course, players, and
+ * roundLength / nineSide / startingHole.
+ *
+ * ID policy: the ActiveRound keeps the SAME id (and startTime). Saving or
+ * finishing upserts golf_rounds by id, so a restarted round replaces any
+ * earlier draft of itself instead of leaving a duplicate behind.
+ */
+export function withRestartedRound(
+  round: ActiveRound,
+  course: Course
+): { round: ActiveRound; currentHole: number } {
+  const scores: Record<string, HoleScore[]> = {};
+  for (const pid of round.playerIds) scores[pid] = [];
+  const next: ActiveRound = { ...round, scores };
+  delete next.liveStrokes;
+  delete next.shotLog;
+  return { round: next, currentHole: getStartingHoleForRound(course, round) };
+}
+
+/**
+ * "Quit and delete": drop any incomplete draft of this round from saved
+ * rounds so nothing half-played lingers in history or localStorage.
+ * Completed rounds are never touched.
+ */
+export function withoutIncompleteDraft(rounds: Round[], roundId: string): Round[] {
+  return rounds.filter((r) => r.completed || r.id !== roundId);
 }

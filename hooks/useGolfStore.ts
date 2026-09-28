@@ -27,6 +27,8 @@ export function useGolfStore() {
   const [storageHydrated, setStorageHydrated] = useState(false);
   /** True after hydrate if an active round was restored (page can switch tab). */
   const [restoredActiveRound, setRestoredActiveRound] = useState(false);
+  /** Round kept but parked on Home ("Save and continue later"). Persisted. */
+  const [roundPaused, setRoundPaused] = useState(false);
 
   useEffect(() => {
     setCourses(getCourses());
@@ -37,6 +39,7 @@ export function useGolfStore() {
     if (stored?.round) {
       setActiveRound(stored.round);
       setCurrentHole(stored.currentHole || stored.round.startingHole || 1);
+      setRoundPaused(stored.paused === true);
       setRestoredActiveRound(true);
     }
 
@@ -61,11 +64,18 @@ export function useGolfStore() {
   useEffect(() => {
     if (!storageHydrated) return;
     if (activeRound) {
-      saveActiveRound({ round: activeRound, currentHole });
+      saveActiveRound(
+        roundPaused ? { round: activeRound, currentHole, paused: true } : { round: activeRound, currentHole }
+      );
     } else {
       clearActiveRound();
     }
-  }, [activeRound, currentHole, storageHydrated]);
+  }, [activeRound, currentHole, roundPaused, storageHydrated]);
+
+  // A cleared round can never stay "paused".
+  useEffect(() => {
+    if (!activeRound && roundPaused) setRoundPaused(false);
+  }, [activeRound, roundPaused]);
 
   useEffect(() => {
     if (!activeRound) return;
@@ -90,6 +100,8 @@ export function useGolfStore() {
     setCurrentHole,
     storageHydrated,
     restoredActiveRound,
+    roundPaused,
+    setRoundPaused,
     clearActiveRound,
   };
 }

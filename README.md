@@ -18,6 +18,8 @@ All data is stored locally in your browser using localStorage. No accounts, no s
 - Manual score entry as a fallback on any hole (fits in the same clicker area)
 - Frozen hole screen on iPhone: during a round the hole view is one fixed, screen-sized frame (top bar, player chips, clicker, Prev / Next) with zero scrolling. It never slides, pans, rubber-bands, pinches, or pulls to refresh, and holes change only with the Prev / Next buttons
 - **Card** button opens a contained overlay with the live leaderboard and a hole-by-hole score grid (tap a hole to jump to it); it is the only thing on the play view that scrolls
+- **Quit** on the hole screen asks "Quit this round?" with three choices: **Save and continue later** (keeps every score, nothing goes to history or stats), **Start this round again** (clears the scores and restarts on the round's starting hole with the same course and players), or **Quit and delete** (removes the round for good). Restart and delete each ask for a second confirmation inside the modal, with Back
+- Resume banner on Home after Save and continue later ("Round in progress at … · Hole N") with a big **Resume** button and the same Quit choices; it survives closing the app. A plain refresh or relaunch mid-round still goes straight back to the hole
 - Keeps the screen awake during a round where the browser supports it (Screen Wake Lock)
 - Live leaderboard during the round (total, vs par, position), inside the Card overlay
 - Complete round history with official scorecard marks (circles for under par, squares for over par)
