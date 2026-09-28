@@ -11,6 +11,12 @@ const STORAGE_KEYS = {
 export interface StoredActiveRound {
   round: ActiveRound;
   currentHole: number;
+  /**
+   * True only after an explicit "Save and continue later": the app opens on
+   * Home with the resume banner instead of the hole screen. A plain refresh /
+   * relaunch mid-round (flag absent) lands straight back on the hole.
+   */
+  paused?: boolean;
 }
 
 // Safe localStorage helpers with proper error handling and typing

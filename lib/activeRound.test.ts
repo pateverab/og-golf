@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { ActiveRound, Course } from "@/lib/types";
+import type { ActiveRound, Course, Round } from "@/lib/types";
 import {
   clampStrokeScore,
   getLiveStrokes,
   getPlayerScoreOnHole,
   getShotLogForHole,
+  getStartingHoleForRound,
   isActiveRoundFullyScored,
   pickNextUnscoredPlayer,
   withHoleOut,
@@ -14,6 +15,8 @@ import {
   withUndoLastLiveStroke,
   withUpdatedHoleScore,
   withClearedLiveStrokesForHole,
+  withRestartedRound,
+  withoutIncompleteDraft,
 } from "@/lib/activeRound";
 
 function course9(): Course {
@@ -162,5 +165,78 @@ describe("pickNextUnscoredPlayer", () => {
     expect(pickNextUnscoredPlayer(ids, "b", () => true)).toBeNull();
     expect(pickNextUnscoredPlayer(["solo"], "solo", () => true)).toBeNull();
     expect(pickNextUnscoredPlayer([], "x", () => false)).toBeNull();
+  });
+});
+
+function course18(): Course {
+  return {
+    id: "c18",
+    name: "Eighteen",
+    location: "Quito",
+    holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: i % 3 === 0 ? 5 : 4 })),
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+describe("withRestartedRound", () => {
+  const played = (): ActiveRound => {
+    let round: ActiveRound = { ...baseRound(), courseId: "c18", roundLength: 18 };
+    round = withUpdatedHoleScore(round, "p1", 1, 5);
+    round = withUpdatedHoleScore(round, "p2", 1, 4);
+    round = withRecordedLiveStroke(round, "p1", 2, { lie: "tee" });
+    round = withRecordedLiveStroke(round, "p1", 2, { lie: "fairway", penalty: true });
+    return round;
+  };
+
+  it("wipes scores, live taps and shot log but keeps id, course, players and config", () => {
+    const before = played();
+    expect(getLiveStrokes(before, "p1", 2)).toBe(2);
+    const { round, currentHole } = withRestartedRound(before, course18());
+    expect(round.id).toBe(before.id);
+    expect(round.courseId).toBe(before.courseId);
+    expect(round.playerIds).toEqual(["p1", "p2"]);
+    expect(round.startTime).toBe(before.startTime);
+    expect([round.roundLength, round.nineSide, round.startingHole]).toEqual([18, "front", 1]);
+    expect(round.scores).toEqual({ p1: [], p2: [] });
+    expect(round.liveStrokes).toBeUndefined();
+    expect(round.shotLog).toBeUndefined();
+    expect(getLiveStrokes(round, "p1", 2)).toBe(0);
+    expect(currentHole).toBe(1);
+  });
+
+  it("does not mutate the original round", () => {
+    const before = played();
+    withRestartedRound(before, course18());
+    expect(getPlayerScoreOnHole(before, "p1", 1)).toBe(5);
+    expect(getShotLogForHole(before, "p1", 2)).toHaveLength(2);
+  });
+
+  it("restarts on the configured starting hole (hole 10 start, back nine)", () => {
+    const tenStart: ActiveRound = { ...played(), roundLength: 18, startingHole: 10 };
+    expect(withRestartedRound(tenStart, course18()).currentHole).toBe(10);
+    const backNine: ActiveRound = { ...played(), roundLength: 9, nineSide: "back", startingHole: 10 };
+    expect(withRestartedRound(backNine, course18()).currentHole).toBe(10);
+    expect(getStartingHoleForRound(course9(), baseRound())).toBe(1);
+  });
+});
+
+describe("withoutIncompleteDraft", () => {
+  const r = (id: string, completed: boolean): Round => ({
+    id,
+    courseId: "c9",
+    date: "2026-02-01T00:00:00.000Z",
+    playerScores: [],
+    completed,
+    createdAt: "2026-02-01T00:00:00.000Z",
+  });
+
+  it("removes only the incomplete draft with this id", () => {
+    const rounds = [r("a1", false), r("b2", false), r("c3", true)];
+    expect(withoutIncompleteDraft(rounds, "a1").map((x) => x.id)).toEqual(["b2", "c3"]);
+  });
+
+  it("never removes a completed round", () => {
+    const rounds = [r("a1", true)];
+    expect(withoutIncompleteDraft(rounds, "a1")).toEqual(rounds);
   });
 });

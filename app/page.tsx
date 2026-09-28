@@ -9,6 +9,9 @@ import {
   withUndoLastLiveStroke,
   withHoleOut,
   withClearedLiveStrokesForHole,
+  withRestartedRound,
+  withoutIncompleteDraft,
+  getStartingHoleForRound,
 } from "@/lib/activeRound";
 import {
   Course,
@@ -43,6 +46,7 @@ import { generateId } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { PlayHoleShell } from "@/components/PlayHoleShell";
+import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
@@ -64,6 +68,8 @@ export default function GolfScoreTracker() {
     setCurrentHole,
     storageHydrated,
     restoredActiveRound,
+    roundPaused,
+    setRoundPaused,
   } = useGolfStore();
 
   // UI state
@@ -75,6 +81,8 @@ export default function GolfScoreTracker() {
   const [isStartRoundModalOpen, setIsStartRoundModalOpen] = useState(false);
   /** playerIds showing manual +/- instead of live clicker for current hole */
   const [manualScorePlayers, setManualScorePlayers] = useState<string[]>([]);
+  /** Quit modal opened from the Home resume banner (the hole screen has its own). */
+  const [homeQuitOpen, setHomeQuitOpen] = useState(false);
 
   useEffect(() => {
     setManualScorePlayers([]);
@@ -94,10 +102,29 @@ export default function GolfScoreTracker() {
 
   // If hydrate restored an in-progress round, land on the rounds tab once.
   useEffect(() => {
+    // After an explicit "Save and continue later" the app opens on Home with the
+    // resume banner; a plain mid-round relaunch goes straight back to the hole.
     if (restoredActiveRound) {
-      setActiveTab("rounds");
+      setActiveTab(roundPaused ? "home" : "rounds");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoredActiveRound]);
+
+  // Keep the resume banner in view: after "Save and continue later" (or a
+  // relaunch into a saved round) Home starts at the top, and the browser's
+  // reload scroll restoration can't push the banner off-screen.
+  useEffect(() => {
+    if (!roundPaused || typeof window === "undefined") return;
+    const hasRestoration = "scrollRestoration" in window.history;
+    if (hasRestoration) window.history.scrollRestoration = "manual";
+    const toTop = () => window.scrollTo(0, 0);
+    toTop();
+    const timers = [window.setTimeout(toTop, 100), window.setTimeout(toTop, 350)];
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      if (hasRestoration) window.history.scrollRestoration = "auto";
+    };
+  }, [roundPaused]);
 
   useEffect(() => {
     const nav = window.navigator as Navigator & { standalone?: boolean };
@@ -264,6 +291,7 @@ export default function GolfScoreTracker() {
     };
 
     setActiveRound(newActiveRound);
+    setRoundPaused(false);
     setCurrentHole(holesInPlay[0] ?? 1);
     setIsStartRoundModalOpen(false);
     setActiveTab("rounds"); // Switch to rounds view
@@ -423,19 +451,61 @@ export default function GolfScoreTracker() {
     setActiveTab("home");
   };
 
-  const cancelActiveRound = () => {
-    if (confirm("Discard the current round? Unsaved scores will be lost.")) {
-      setActiveRound(null);
-      setCurrentHole(1);
-      clearStoredActiveRound();
-      setActiveTab("home");
-    }
+  // ==================== QUIT (hole screen / resume banner) ====================
+  /** Save and continue later: keep the ActiveRound (not completed, nothing added
+   *  to history or stats) and park it on Home behind the resume banner. */
+  const pauseActiveRound = () => {
+    if (!activeRound) return;
+    setRoundPaused(true);
+    setManualScorePlayers([]);
+    setActiveTab("home");
+  };
+
+  const resumePausedRound = () => {
+    setHomeQuitOpen(false);
+    setRoundPaused(false);
+  };
+
+  /** Start this round again (confirmed in the Quit modal). Same id — see withRestartedRound. */
+  const restartActiveRound = () => {
+    if (!activeRound) return;
+    const course = getCurrentCourse();
+    if (!course) return;
+    const restarted = withRestartedRound(activeRound, course);
+    // An older incomplete draft of this round (same id) would still hold the
+    // wiped scores; drop it so history can't resurrect them.
+    const roundId = activeRound.id;
+    setRounds((prev) => withoutIncompleteDraft(prev, roundId));
+    setActiveRound(restarted.round);
+    setCurrentHole(restarted.currentHole);
+    setManualScorePlayers([]);
+    setHomeQuitOpen(false);
+    setRoundPaused(false);
+  };
+
+  /** Quit and delete (confirmed in the Quit modal): no active round, no draft, no banner. */
+  const deleteActiveRound = () => {
+    if (!activeRound) return;
+    const roundId = activeRound.id;
+    setRounds((prev) => withoutIncompleteDraft(prev, roundId));
+    setActiveRound(null);
+    setCurrentHole(1);
+    setRoundPaused(false);
+    setManualScorePlayers([]);
+    setHomeQuitOpen(false);
+    clearStoredActiveRound();
+    setActiveTab("home");
   };
 
   // Resume an incomplete history round into the live scorer (same Round id)
   const resumeIncompleteRound = (roundId: string) => {
     if (activeRound) {
-      alert("Finish or save the current round before resuming another.");
+      if (activeRound.id === roundId) {
+        resumePausedRound();
+        setViewingRoundId(null);
+        return;
+      }
+      alert("Resume or quit the round in progress before resuming another.");
       return;
     }
 
@@ -581,13 +651,13 @@ export default function GolfScoreTracker() {
       ? getRoundFormatLabel(currentCourseForActiveRound, activeRound)
       : "";
 
-  const isPlaySurfaceActive = Boolean(activeRound && currentCourseForActiveRound);
+  const isPlaySurfaceActive = Boolean(activeRound && currentCourseForActiveRound && !roundPaused);
   useScreenWakeLock(isPlaySurfaceActive);
 
   // ========== ACTIVE ROUND: the frozen hole screen is the ONLY thing rendered ==========
   // No header tabs, install CTA, leaderboard, scorecard, export, or footer sits
   // under / behind it. PlayHoleShell locks html/body while mounted.
-  if (activeRound && currentCourseForActiveRound) {
+  if (activeRound && currentCourseForActiveRound && !roundPaused) {
     const holeParFor = (hole: number) =>
       currentCourseForActiveRound.holes.find((h) => h.number === hole)?.par ?? 4;
     return (
@@ -616,9 +686,10 @@ export default function GolfScoreTracker() {
         onAdjustScore={(playerId, delta) => adjustScore(playerId, currentHole, delta)}
         onSetToPar={(playerId) => setScoreToPar(playerId, currentHole, holeParFor(currentHole))}
         onGoToHole={(hole) => setCurrentHole(hole)}
-        onSaveForLater={() => saveActiveRound(false)}
         onFinish={() => saveActiveRound(true)}
-        onCancel={cancelActiveRound}
+        onPause={pauseActiveRound}
+        onRestart={restartActiveRound}
+        onDelete={deleteActiveRound}
       />
     );
   }
@@ -684,8 +755,59 @@ export default function GolfScoreTracker() {
             📱 Install OG Golf on iPhone
           </button>
         )}
+        {/* ========== RESUME BANNER (round saved for later) ========== */}
+        {activeRound && roundPaused && (
+          <div
+            data-control="resume-banner"
+            className="golf-card rounded-3xl p-5 mb-6 border-2 border-[#c5a36f]"
+          >
+            <div className="flex items-center gap-2 text-[11px] tracking-[2px] font-semibold text-[#c5a36f]">
+              <span className="inline-block w-2 h-2 bg-amber-400 rounded-full" aria-hidden="true" />
+              SAVED FOR LATER
+            </div>
+            <div className="mt-1 text-lg font-semibold leading-snug" data-control="resume-banner-text">
+              Round in progress at {currentCourseForActiveRound?.name ?? "Unknown course"} · Hole {currentHole}
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={resumePausedRound}
+                disabled={!currentCourseForActiveRound}
+                data-control="resume"
+                className="flex-1 golf-btn text-xl py-5 rounded-2xl font-bold shadow-lg active:scale-[0.985] disabled:opacity-40"
+              >
+                ▶ Resume
+              </button>
+              <button
+                type="button"
+                onClick={() => setHomeQuitOpen(true)}
+                data-control="banner-quit"
+                className="px-6 rounded-2xl border-2 border-red-400/60 text-red-400 text-lg font-bold active:bg-red-500/10"
+              >
+                Quit
+              </button>
+            </div>
+          </div>
+        )}
+        {activeRound && (
+          <QuitRoundModal
+            open={homeQuitOpen}
+            courseName={currentCourseForActiveRound?.name ?? "Unknown course"}
+            currentHole={currentHole}
+            startingHole={
+              currentCourseForActiveRound
+                ? getStartingHoleForRound(currentCourseForActiveRound, activeRound)
+                : activeRound.startingHole
+            }
+            onClose={() => setHomeQuitOpen(false)}
+            onSaveForLater={() => setHomeQuitOpen(false)}
+            onRestart={restartActiveRound}
+            onDelete={deleteActiveRound}
+          />
+        )}
+
         {/* ========== HOME VIEW ========== */}
-        {!activeRound && activeTab === "home" && (
+        {activeTab === "home" && (
           <>
             {/* Hero / Big CTA */}
             <div className="text-center mb-8">
@@ -696,6 +818,7 @@ export default function GolfScoreTracker() {
               <p className="text-[#c5a36f]/80 max-w-xs mx-auto">Track scores fast. Watch your OG index improve.</p>
             </div>
 
+            {!activeRound && (
             <button
               onClick={openStartRoundModal}
               disabled={courses.length === 0 || players.length === 0}
@@ -705,6 +828,7 @@ export default function GolfScoreTracker() {
                 ? "Add a course and players first"
                 : "▶  Start New Round"}
             </button>
+            )}
 
             {/* MY COURSES */}
             <section className="mb-8">
@@ -873,7 +997,7 @@ export default function GolfScoreTracker() {
         )}
 
         {/* ========== STATS VIEW ========== */}
-        {!activeRound && activeTab === "stats" && (
+        {activeTab === "stats" && (
           <PlayerStatsView
             players={players}
             rounds={rounds}
@@ -884,7 +1008,7 @@ export default function GolfScoreTracker() {
         )}
 
         {/* ========== ROUNDS / HISTORY VIEW ========== */}
-        {!activeRound && activeTab === "rounds" && (
+        {activeTab === "rounds" && (
           <div>
             <h2 className="text-2xl font-semibold mb-4 px-1">Round History</h2>
 
