@@ -48,6 +48,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlayerStatsView } from "@/components/PlayerStatsView";
 import { LiveLeaderboard } from "@/components/LiveLeaderboard";
 import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
+import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import {
   getTestDataSuccessMessage,
@@ -602,9 +603,13 @@ export default function GolfScoreTracker() {
       ? getRoundFormatLabel(currentCourseForActiveRound, activeRound)
       : "";
 
+  const isPlaySurfaceActive = Boolean(activeRound && currentCourseForActiveRound);
+  usePlaySurfaceLock(isPlaySurfaceActive);
+
   return (
-    <div className="min-h-screen pb-20">
-      {/* Top Navigation / Header */}
+    <div className={isPlaySurfaceActive ? "" : "min-h-screen pb-20"}>
+      {/* Top Navigation / Header (hidden while the locked play surface is up) */}
+      {!isPlaySurfaceActive && (
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c3326]/95 backdrop-blur border-b border-golf-green-100 dark:border-[#1a4a2f]">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -647,10 +652,11 @@ export default function GolfScoreTracker() {
           </div>
         </div>
       </header>
+      )}
 
       <div className="max-w-4xl mx-auto px-5 pt-6">
                 {/* Install on iPhone — only when iOS Safari and not already standalone */}
-        {showInstallButton && (
+        {showInstallButton && !isPlaySurfaceActive && (
           <button
             onClick={() => {
               alert("📱 How to install OG Golf on your iPhone:\n\n" +
@@ -663,30 +669,42 @@ export default function GolfScoreTracker() {
             📱 Install OG Golf on iPhone
           </button>
         )}
-        {/* ========== ACTIVE ROUND SCREEN (Full focus) ========== */}
+        {/* ========== ACTIVE ROUND SCREEN: locked full-viewport play surface ========== */}
+        {/* Fixed column (top bar, hole strip, current hole, players, prev/next). Only the
+            player/leaderboard panel scrolls vertically and the hole strip sideways; the
+            document itself never moves (see hooks/usePlaySurfaceLock.ts). */}
         {activeRound && currentCourseForActiveRound && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-[#c5a36f] text-sm font-medium tracking-wider">IN PROGRESS</div>
-                <div className="text-3xl font-semibold">{currentCourseForActiveRound.name}</div>
-                <div className="text-sm text-[#c5a36f]/80 mt-1">{activeRoundFormatLabel}</div>
+          <div
+            className="og-play-frame bg-golf-cream text-golf-green-900 dark:bg-[#0f3d24] dark:text-golf-cream"
+            data-play-root
+          >
+            <div className="max-w-4xl w-full mx-auto flex flex-col flex-1 min-h-0 px-4">
+              {/* Top bar */}
+              <div className="shrink-0 pt-3 pb-2 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[#c5a36f] text-[11px] font-medium tracking-wider truncate">
+                    IN PROGRESS · {activeRoundFormatLabel}
+                  </div>
+                  <div className="text-xl font-semibold truncate">{currentCourseForActiveRound.name}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => saveActiveRound(false)} className="golf-btn-secondary px-3 py-2.5 rounded-xl text-xs font-semibold">
+                    Save for Later
+                  </button>
+                  <button onClick={() => saveActiveRound(true)} className="golf-btn px-3 py-2.5 rounded-xl text-xs font-semibold">
+                    Finish
+                  </button>
+                  <button onClick={cancelActiveRound} className="px-2 py-2.5 text-xs text-red-400/80 hover:text-red-400">
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => saveActiveRound(false)} className="golf-btn-secondary px-5 py-2.5 rounded-xl text-sm font-semibold">
-                  Save &amp; Continue Later
-                </button>
-                <button onClick={() => saveActiveRound(true)} className="golf-btn px-6 py-2.5 rounded-xl text-sm font-semibold">
-                  Finish Round
-                </button>
-                <button onClick={cancelActiveRound} className="px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400">
-                  Cancel
-                </button>
-              </div>
-            </div>
 
-            {/* Hole Navigation - larger, clearer, faster to tap */}
-            <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-3 -mx-1 px-1">
+              {/* Hole strip: the only sideways scroller */}
+              <div
+                data-scroll-allow="x"
+                className="og-play-hstrip shrink-0 flex items-center gap-2 pb-2 -mx-1 px-1"
+              >
               {activeHolesInPlay.map((holeNumber) => {
                 const hole = currentCourseForActiveRound.holes.find((h) => h.number === holeNumber)!;
                 const isActive = currentHole === hole.number;
@@ -697,7 +715,7 @@ export default function GolfScoreTracker() {
                   <button
                     key={hole.number}
                     onClick={() => setCurrentHole(hole.number)}
-                    className={`min-w-[72px] px-5 py-3 rounded-2xl text-base font-bold flex-shrink-0 border-2 transition active:scale-[0.96] ${
+                    className={`min-w-[64px] px-4 py-2 rounded-2xl text-sm font-bold flex-shrink-0 border-2 transition active:scale-[0.96] ${
                       isActive
                         ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f] shadow-lg"
                         : allPlayersHaveScore
@@ -710,157 +728,159 @@ export default function GolfScoreTracker() {
                   </button>
                 );
               })}
-            </div>
+              </div>
 
-            <LiveLeaderboard
-              playerIds={activeRound.playerIds}
-              players={players}
-              course={currentCourseForActiveRound}
-              scores={activeRound.scores}
-              roundConfig={activeRound}
-            />
-
-            {/* Score Entry - Optimized for speed on the course */}
-            <div className="golf-card rounded-3xl p-5">
-              {/* Stronger current hole header */}
-              <div className="mb-4 flex items-center justify-between px-1">
-                <div>
-                  <div className="text-sm tracking-[1px] text-[#c5a36f]/70">CURRENT HOLE</div>
-                  <div className="text-3xl font-semibold tabular-nums flex items-baseline gap-2 mt-0.5">
-                    Hole {currentHole}
-                    <span className="inline-block text-base font-medium px-3 py-px rounded-full bg-golf-green-100 dark:bg-[#1a4a2f] text-[#c5a36f]">
-                      Par {currentCourseForActiveRound.holes.find(h => h.number === currentHole)?.par}
-                    </span>
-                  </div>
+              {/* Current hole header */}
+              <div className="shrink-0 flex items-center justify-between px-1 py-2">
+                <div className="text-2xl font-semibold tabular-nums flex items-baseline gap-2">
+                  Hole {currentHole}
+                  <span className="inline-block text-base font-medium px-3 py-px rounded-full bg-golf-green-100 dark:bg-[#1a4a2f] text-[#c5a36f]">
+                    Par {currentCourseForActiveRound.holes.find(h => h.number === currentHole)?.par}
+                  </span>
                 </div>
                 <div className="text-right text-xs text-[#c5a36f]">
                   Tap <span className="font-semibold">+1 Stroke</span><br />then <span className="font-semibold">Hole Out</span>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {activeRound.playerIds.map((playerId) => {
-                  const player = players.find((p) => p.id === playerId)!;
-                  const currentScore = getPlayerScoreOnHole(playerId, currentHole);
-                  const par = currentCourseForActiveRound.holes.find((h) => h.number === currentHole)?.par ?? 4;
-                  const roundTotal = getActiveTotalForPlayer(playerId);
-                  const roundVsPar = getActiveVsParForPlayer(playerId);
-                  const liveCount = activeRound ? readLiveStrokes(activeRound, playerId, currentHole) : 0;
-                  const showManual = manualScorePlayers.includes(playerId);
+              {/* Players + leaderboard: the only vertical scroller */}
+              <div data-scroll-allow="y" className="og-play-scroll -mx-1 px-1">
+                <div className="golf-card rounded-3xl p-4">
+                  <div className="space-y-4">
+                    {activeRound.playerIds.map((playerId) => {
+                      const player = players.find((p) => p.id === playerId)!;
+                      const currentScore = getPlayerScoreOnHole(playerId, currentHole);
+                      const par = currentCourseForActiveRound.holes.find((h) => h.number === currentHole)?.par ?? 4;
+                      const roundTotal = getActiveTotalForPlayer(playerId);
+                      const roundVsPar = getActiveVsParForPlayer(playerId);
+                      const liveCount = activeRound ? readLiveStrokes(activeRound, playerId, currentHole) : 0;
+                      const showManual = manualScorePlayers.includes(playerId);
 
-                  return (
-                    <div key={playerId} className="space-y-3">
-                      <div className="flex items-baseline justify-between px-1">
-                        <div>
-                          <div className="font-semibold text-lg">{player.name}</div>
-                          {player.nickname && <div className="text-xs text-[#c5a36f]/70 -mt-0.5">“{player.nickname}”</div>}
-                        </div>
-                        <div className="text-right text-sm tabular-nums">
-                          <span className="font-medium">{roundTotal || "—"}</span>
-                          <span className={`ml-1.5 text-xs ${roundVsPar < 0 ? "text-emerald-400" : roundVsPar > 0 ? "text-red-400" : "text-[#c5a36f]"}`}>
-                            ({roundVsPar === 0 ? "E" : roundVsPar > 0 ? `+${roundVsPar}` : roundVsPar})
-                          </span>
-                        </div>
-                      </div>
-
-                      {!showManual ? (
-                        <LiveStrokeClicker
-                          playerName={player.name}
-                          holeNumber={currentHole}
-                          par={par}
-                          liveCount={liveCount}
-                          committedScore={currentScore}
-                          onIncrement={(lie) => incrementLiveStroke(playerId, currentHole, lie)}
-                          onDecrement={() => decrementLiveStroke(playerId, currentHole)}
-                          onPenalty={(lie) => penaltyLiveStroke(playerId, currentHole, lie)}
-                          onHoleOut={() => holeOutLiveStroke(playerId, currentHole)}
-                          onEditManual={() =>
-                            setManualScorePlayers((prev) =>
-                              prev.includes(playerId) ? prev : [...prev, playerId]
-                            )
-                          }
-                        />
-                      ) : (
-                        <div className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => adjustScore(playerId, currentHole, -1)}
-                              className="score-btn"
-                              aria-label="Decrease score"
-                            >
-                              −
-                            </button>
-
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              value={currentScore ?? ""}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value);
-                                if (!isNaN(val)) updateScore(playerId, currentHole, val);
-                              }}
-                              onBlur={(e) => {
-                                if (!e.target.value) updateScore(playerId, currentHole, par);
-                              }}
-                              placeholder={String(par)}
-                              className="score-input flex-1 max-w-[82px]"
-                            />
-
-                            <button
-                              onClick={() => adjustScore(playerId, currentHole, 1)}
-                              className="score-btn"
-                              aria-label="Increase score"
-                            >
-                              +
-                            </button>
-
-                            <button
-                              onClick={() => setScoreToPar(playerId, currentHole, par)}
-                              className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
-                            >
-                              Set to Par
-                            </button>
+                      return (
+                        <div key={playerId} className="space-y-3">
+                          <div className="flex items-baseline justify-between px-1">
+                            <div>
+                              <div className="font-semibold text-lg">{player.name}</div>
+                              {player.nickname && <div className="text-xs text-[#c5a36f]/70 -mt-0.5">“{player.nickname}”</div>}
+                            </div>
+                            <div className="text-right text-sm tabular-nums">
+                              <span className="font-medium">{roundTotal || "—"}</span>
+                              <span className={`ml-1.5 text-xs ${roundVsPar < 0 ? "text-emerald-400" : roundVsPar > 0 ? "text-red-400" : "text-[#c5a36f]"}`}>
+                                ({roundVsPar === 0 ? "E" : roundVsPar > 0 ? `+${roundVsPar}` : roundVsPar})
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="mt-2 px-1 flex items-center justify-between">
+                          {!showManual ? (
+                            <LiveStrokeClicker
+                              playerName={player.name}
+                              holeNumber={currentHole}
+                              par={par}
+                              liveCount={liveCount}
+                              committedScore={currentScore}
+                              onIncrement={(lie) => incrementLiveStroke(playerId, currentHole, lie)}
+                              onDecrement={() => decrementLiveStroke(playerId, currentHole)}
+                              onPenalty={(lie) => penaltyLiveStroke(playerId, currentHole, lie)}
+                              onHoleOut={() => holeOutLiveStroke(playerId, currentHole)}
+                              onEditManual={() =>
+                                setManualScorePlayers((prev) =>
+                                  prev.includes(playerId) ? prev : [...prev, playerId]
+                                )
+                              }
+                            />
+                          ) : (
+                            <div className="bg-white dark:bg-[#0c3326] rounded-2xl p-5">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => adjustScore(playerId, currentHole, -1)}
+                                  className="score-btn"
+                                  aria-label="Decrease score"
+                                >
+                                  −
+                                </button>
+
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={currentScore ?? ""}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val)) updateScore(playerId, currentHole, val);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (!e.target.value) updateScore(playerId, currentHole, par);
+                                  }}
+                                  placeholder={String(par)}
+                                  className="score-input flex-1 max-w-[82px]"
+                                />
+
+                                <button
+                                  onClick={() => adjustScore(playerId, currentHole, 1)}
+                                  className="score-btn"
+                                  aria-label="Increase score"
+                                >
+                                  +
+                                </button>
+
+                                <button
+                                  onClick={() => setScoreToPar(playerId, currentHole, par)}
+                                  className="ml-1 flex-1 h-[68px] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition active:scale-[0.985]"
+                                >
+                                  Set to Par
+                                </button>
+                              </div>
+
+                              <div className="mt-2 px-1 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setManualScorePlayers((prev) => prev.filter((id) => id !== playerId))
+                                  }
+                                  className="text-xs text-[#c5a36f]/80 underline"
+                                >
+                                  Use stroke clicker
+                                </button>
+                                {currentScore !== null && (
+                                  <span className={`text-sm font-semibold tabular-nums ${currentScore > par ? "text-red-400" : currentScore < par ? "text-emerald-400" : "text-[#c5a36f]"}`}>
+                                    This hole: {currentScore > par ? "+" : ""}{currentScore - par}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {!showManual && currentScore === null && (
                             <button
                               type="button"
                               onClick={() =>
-                                setManualScorePlayers((prev) => prev.filter((id) => id !== playerId))
+                                setManualScorePlayers((prev) =>
+                                  prev.includes(playerId) ? prev : [...prev, playerId]
+                                )
                               }
-                              className="text-xs text-[#c5a36f]/80 underline"
+                              className="w-full text-xs text-[#c5a36f]/70 py-1"
                             >
-                              Use stroke clicker
+                              Manual score instead
                             </button>
-                            {currentScore !== null && (
-                              <span className={`text-sm font-semibold tabular-nums ${currentScore > par ? "text-red-400" : currentScore < par ? "text-emerald-400" : "text-[#c5a36f]"}`}>
-                                This hole: {currentScore > par ? "+" : ""}{currentScore - par}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
+                </div>
 
-                      {!showManual && currentScore === null && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setManualScorePlayers((prev) =>
-                              prev.includes(playerId) ? prev : [...prev, playerId]
-                            )
-                          }
-                          className="w-full text-xs text-[#c5a36f]/70 py-1"
-                        >
-                          Manual score instead
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                <div className="mt-4 pb-2">
+                  <LiveLeaderboard
+                    playerIds={activeRound.playerIds}
+                    players={players}
+                    course={currentCourseForActiveRound}
+                    scores={activeRound.scores}
+                    roundConfig={activeRound}
+                  />
+                </div>
               </div>
 
-              {/* MAXIMUM thumb-friendly navigation at the bottom - much bigger as requested */}
-              <div className="mt-6 grid grid-cols-2 gap-4">
+              {/* Compact prev / next, pinned above the home indicator */}
+              <div className="shrink-0 grid grid-cols-2 gap-3 pt-2 pb-3">
                 <button
                   onClick={() => {
                     if (activeHoleIndex > 0) {
@@ -868,14 +888,14 @@ export default function GolfScoreTracker() {
                     }
                   }}
                   disabled={activeHoleIndex <= 0}
-                  className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
+                  className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                 >
                   ← Previous Hole
                 </button>
                 {activeHoleIndex >= 0 && activeHoleIndex === activeHolesInPlay.length - 1 ? (
                   <button
                     onClick={() => saveActiveRound(true)}
-                    className="py-5 text-lg font-bold rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] active:opacity-90 transition-all"
+                    className="py-4 text-lg font-bold rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] active:opacity-90 transition-all"
                   >
                     Finish Round →
                   </button>
@@ -887,7 +907,7 @@ export default function GolfScoreTracker() {
                       }
                     }}
                     disabled={activeHoleIndex < 0 || activeHoleIndex >= activeHolesInPlay.length - 1}
-                    className="py-5 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
+                    className="py-4 text-lg font-bold rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition-all"
                   >
                     Next Hole →
                   </button>
