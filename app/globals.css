@@ -2,14 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * OG Golf color schemes (tokens from og-golf-palettes/schemes.md).
+ * Values are space-separated RGB channels so Tailwind og-* colors support /alpha.
+ * Sunlight = light (html without .dark), Clubhouse = dark (html.dark).
+ * Storage key and values are unchanged: og-golf-theme = light | dark.
+ */
 :root {
-  --golf-green-900: #051b14;
-  --golf-green-800: #08251a;
-  --golf-green-700: #0a2e1f;
-  --golf-green-600: #0f3d24;
-  --golf-gold: #c5a36f;
-  --golf-gold-light: #d9c38f;
-  --golf-cream: #f5f3eb;
+  color-scheme: light;
+  --og-bg: 250 247 238; /* #faf7ee Background (body, hole screen, Card overlay) */
+  --og-surface: 255 255 255; /* #ffffff Surface: strip cells, player chips, sticky header, stat tiles */
+  --og-raised: 241 236 220; /* #f1ecdc Raised: Lying / Next cards, .golf-card, modals, selected options */
+  --og-primary: 10 46 31; /* #0a2e1f Primary green fill (Hole Out) */
+  --og-on-primary: 236 208 143; /* #ecd08f Text on primary green */
+  --og-accent: 212 168 76; /* #d4a84c Gold fill: +1, selected chips, NOW badge, primary buttons */
+  --og-accent-hover: 201 154 58; /* #c99a3a Hover on gold fills (derived, not in schemes.md) */
+  --og-on-accent: 5 27 20; /* #051b14 Text on gold */
+  --og-accent-text: 111 76 12; /* #6f4c0c Gold as text on bg / surface */
+  --og-accent-line: 111 76 12; /* #6f4c0c Gold outlines (Card, Hole Out, NOW, selected options) */
+  --og-text: 5 27 20; /* #051b14 Body text */
+  --og-muted: 47 70 58; /* #2f463a Secondary labels (LYING, P4, 7/18, dates) */
+  --og-border: 79 109 92; /* #4f6d5c Control and card borders */
+  --og-divider: 226 220 203; /* #e2dccb Decorative dividers: table rows, header rule (derived) */
+  --og-success: 7 105 58; /* #07693a Under par: text and circle marks */
+  --og-danger: 169 31 26; /* #a91f1a Over par: text and square marks, Quit, destructive */
+  --og-on-danger: 255 255 255; /* #ffffff Text on a solid danger fill (derived) */
+  --og-live: 122 79 0; /* #7a4f00 In-play indicator */
+  --og-disabled-bg: 239 236 227; /* #efece3 +1 disabled fill */
+  --og-disabled-text: 93 100 94; /* #5d645e +1 disabled label */
+  --og-disabled-border: 139 144 135; /* #8b9087 +1 disabled dashed border */
+  --og-plus-border: 10 46 31; /* #0a2e1f +1 border (deep green in Sunlight) */
+  --og-chip: 255 255 255; /* #ffffff Unselected lie-chip fill */
+  --og-chip-border: 79 109 92; /* #4f6d5c Unselected lie-chip border */
+  --og-chip-selected-border: 10 46 31; /* #0a2e1f Selected chip border (deep green in Sunlight) */
+  --og-now-bg: 247 239 223; /* #f7efdf NOW strip-cell fill */
+  --og-par-pill: 10 46 31; /* #0a2e1f Par pill fill */
+  --og-on-par-pill: 236 208 143; /* #ecd08f Par pill label */
+  --og-penalty-border: 111 76 12; /* #6f4c0c +1 Penalty border */
+  --og-total-bg: 10 46 31; /* #0a2e1f Total plate (scoreboard in Sunlight, same as bg in Clubhouse) */
+  --og-total-text: 236 208 143; /* #ecd08f Big Total number */
+  --og-total-label: 201 214 205; /* #c9d6cd TOTAL and NAME label */
+  --og-total-danger: 255 171 159; /* #ffab9f Over-par vs-par on the Total plate */
+  --og-total-success: 98 213 150; /* #62d596 Under-par vs-par on the Total plate (derived) */
+  --og-total-sub: 201 214 205; /* #c9d6cd +N this hole on the Total plate */
+}
+
+.dark {
+  color-scheme: dark;
+  --og-bg: 6 35 26; /* #06231a */
+  --og-surface: 13 48 36; /* #0d3024 */
+  --og-raised: 19 58 44; /* #133a2c */
+  --og-primary: 21 95 63; /* #155f3f */
+  --og-on-primary: 243 223 174; /* #f3dfae */
+  --og-accent: 216 181 111; /* #d8b56f */
+  --og-accent-hover: 230 197 133; /* #e6c585 */
+  --og-on-accent: 6 35 26; /* #06231a */
+  --og-accent-text: 220 187 120; /* #dcbb78 */
+  --og-accent-line: 216 181 111; /* #d8b56f */
+  --og-text: 247 242 228; /* #f7f2e4 */
+  --og-muted: 169 189 172; /* #a9bdac */
+  --og-border: 94 141 116; /* #5e8d74 */
+  --og-divider: 26 70 51; /* #1a4633 */
+  --og-success: 98 213 150; /* #62d596 */
+  --og-danger: 255 142 126; /* #ff8e7e */
+  --og-on-danger: 6 35 26; /* #06231a */
+  --og-live: 244 198 90; /* #f4c65a */
+  --og-disabled-bg: 22 59 45; /* #163b2d */
+  --og-disabled-text: 142 167 150; /* #8ea796 */
+  --og-disabled-border: 74 111 92; /* #4a6f5c */
+  --og-plus-border: 216 181 111; /* #d8b56f */
+  --og-chip: 13 48 36; /* #0d3024 */
+  --og-chip-border: 94 141 116; /* #5e8d74 */
+  --og-chip-selected-border: 216 181 111; /* #d8b56f */
+  --og-now-bg: 45 69 48; /* #2d4530 */
+  --og-par-pill: 26 70 51; /* #1a4633 */
+  --og-on-par-pill: 220 187 120; /* #dcbb78 */
+  --og-penalty-border: 216 181 111; /* #d8b56f */
+  --og-total-bg: 6 35 26; /* #06231a */
+  --og-total-text: 232 199 131; /* #e8c783 */
+  --og-total-label: 169 189 172; /* #a9bdac */
+  --og-total-danger: 255 142 126; /* #ff8e7e */
+  --og-total-success: 98 213 150; /* #62d596 */
+  --og-total-sub: 169 189 172; /* #a9bdac */
 }
 
 body {
@@ -17,55 +91,52 @@ body {
 }
 
 .golf-card {
-  @apply bg-white border border-golf-green-100 shadow-sm;
-  @apply dark:bg-[#1f4a3a] dark:border-[#2a5a48] dark:shadow-[0_2px_8px_rgba(0,0,0,0.25)];
+  @apply bg-og-raised border border-og-border shadow-sm;
+  @apply dark:shadow-[0_2px_8px_rgba(0,0,0,0.25)];
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
 .golf-card:hover {
   transform: translateY(-2px);
-  @apply shadow-md border-golf-gold;
-  @apply dark:shadow-[0_8px_20px_rgba(0,0,0,0.35)] dark:border-golf-gold;
+  @apply shadow-md border-og-accent-line;
+  @apply dark:shadow-[0_8px_20px_rgba(0,0,0,0.35)];
 }
 
 .golf-btn {
-  background-color: #c5a36f;
-  color: #051b14;
+  background-color: rgb(var(--og-accent));
+  color: rgb(var(--og-on-accent));
   font-weight: 600;
   transition: all 0.1s ease;
-  box-shadow: 0 2px 6px rgba(197, 163, 111, 0.2);
+  box-shadow: 0 2px 6px rgb(var(--og-accent) / 0.2);
 }
 
 .golf-btn:hover {
-  background-color: #d9c38f;
+  background-color: rgb(var(--og-accent-hover));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(197, 163, 111, 0.3);
+  box-shadow: 0 4px 12px rgb(var(--og-accent) / 0.3);
 }
 
 .golf-btn-secondary {
-  @apply bg-golf-green-50 text-golf-green-900 border border-golf-gold;
-  @apply dark:bg-[#1f4a3a] dark:text-golf-cream dark:border-golf-gold;
+  @apply bg-og-raised text-og-text border border-og-accent-line;
 }
 
 .golf-btn-secondary:hover {
-  @apply bg-golf-green-100 border-golf-goldLight;
-  @apply dark:bg-[#2a5a48] dark:border-golf-goldLight;
+  @apply bg-og-surface border-og-accent-hover;
 }
 
 .golf-input {
-  @apply bg-white border-2 border-golf-green-100 text-golf-green-900;
-  @apply dark:bg-[#153a2a] dark:border-[#2a5a48] dark:text-golf-cream;
+  @apply bg-og-surface border-2 border-og-border text-og-text;
   transition: border-color 0.1s ease;
 }
 
 .golf-input:focus {
-  border-color: #c5a36f;
+  border-color: rgb(var(--og-accent-line));
   outline: none;
-  box-shadow: 0 0 0 4px rgba(197, 163, 111, 0.12);
+  box-shadow: 0 0 0 4px rgb(var(--og-accent) / 0.18);
 }
 
 .golf-input::placeholder {
-  @apply text-golf-green-600/50 dark:text-[#5a6b62];
+  @apply text-og-muted;
 }
 
 .score-input {
@@ -74,17 +145,16 @@ body {
   font-size: 1.9rem;
   font-weight: 800;
   text-align: center;
-  @apply bg-white border-4 border-golf-green-100 text-golf-green-900;
-  @apply dark:bg-[#153a2a] dark:border-[#2a5a48] dark:text-golf-cream;
+  @apply bg-og-surface border-4 border-og-border text-og-text;
   border-radius: 18px;
   transition: all 0.06s ease;
   @apply shadow-md dark:shadow-[0_3px_8px_rgba(0,0,0,0.35)];
 }
 
 .score-input:focus {
-  border-color: #c5a36f;
-  box-shadow: 0 0 0 6px rgba(197, 163, 111, 0.25);
-  @apply dark:bg-[#1f4a3a];
+  border-color: rgb(var(--og-accent-line));
+  box-shadow: 0 0 0 6px rgb(var(--og-accent) / 0.25);
+  @apply bg-og-raised;
 }
 
 .score-btn {
@@ -95,8 +165,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  @apply bg-golf-green-100 text-golf-gold border-[3px] border-golf-green-50;
-  @apply dark:bg-[#2a5a48] dark:border-[#1f4a3a];
+  @apply bg-og-raised text-og-accent-text border-[3px] border-og-border;
   border-radius: 9999px;
   transition: all 0.04s ease;
   user-select: none;
@@ -106,9 +175,9 @@ body {
 
 .score-btn:active {
   transform: scale(0.88);
-  background-color: #c5a36f;
-  color: #051b14;
-  border-color: #c5a36f;
+  background-color: rgb(var(--og-accent));
+  color: rgb(var(--og-on-accent));
+  border-color: rgb(var(--og-accent-line));
 }
 
 .saved-indicator {
@@ -117,7 +186,7 @@ body {
   gap: 5px;
   font-size: 10px;
   letter-spacing: 0.5px;
-  @apply text-golf-green-600/60 dark:text-[#5a6b62];
+  @apply text-og-muted;
 }
 
 .leaderboard-row {
@@ -125,11 +194,11 @@ body {
 }
 
 .leaderboard-row:nth-child(even) {
-  @apply bg-golf-green-50/60 dark:bg-[rgba(31,74,58,0.35)];
+  @apply bg-og-surface/50;
 }
 
 .leaderboard-row:hover {
-  @apply bg-golf-gold/10;
+  @apply bg-og-accent/10;
 }
 
 .modal {

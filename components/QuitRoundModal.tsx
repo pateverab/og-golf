@@ -53,9 +53,9 @@ export function QuitRoundModal({
   const bigBtn =
     "w-full min-h-[clamp(52px,9dvh,64px)] rounded-2xl px-4 py-2 text-left flex flex-col justify-center transition active:scale-[0.985]";
   const redConfirm =
-    "w-full h-[clamp(52px,9dvh,64px)] rounded-2xl bg-red-600 text-white text-lg font-bold active:bg-red-700 transition";
+    "w-full h-[clamp(52px,9dvh,64px)] rounded-2xl bg-og-danger text-og-on-danger text-lg font-bold active:bg-og-danger/85 transition";
   const backBtn =
-    "w-full h-[clamp(48px,8dvh,56px)] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-base font-semibold active:bg-[#c5a36f]/10";
+    "w-full h-[clamp(48px,8dvh,56px)] rounded-2xl border-2 border-og-border text-og-accent-text text-base font-semibold active:bg-og-accent/10";
 
   return (
     <div
@@ -69,7 +69,7 @@ export function QuitRoundModal({
         aria-labelledby="og-quit-title"
         data-control="quit-modal"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md max-h-[calc(100dvh-16px)] overflow-hidden rounded-3xl border border-[#c5a36f]/40 bg-white dark:bg-[#0c3326] text-golf-green-900 dark:text-golf-cream shadow-2xl p-[clamp(14px,2.6dvh,22px)] flex flex-col gap-[clamp(8px,1.5dvh,12px)]"
+        className="w-full max-w-md max-h-[calc(100dvh-16px)] overflow-hidden rounded-3xl border border-og-border bg-og-surface text-og-text shadow-2xl p-[clamp(14px,2.6dvh,22px)] flex flex-col gap-[clamp(8px,1.5dvh,12px)]"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -80,7 +80,7 @@ export function QuitRoundModal({
                   ? "Start this round again?"
                   : "Quit and delete?"}
             </h2>
-            <div className="text-xs text-[#c5a36f]/80 truncate mt-0.5">
+            <div className="text-xs text-og-muted truncate mt-0.5">
               {courseName} · Hole {currentHole}
             </div>
           </div>
@@ -89,7 +89,7 @@ export function QuitRoundModal({
             onClick={onClose}
             aria-label="Close"
             data-control="quit-close"
-            className="shrink-0 -mr-1 -mt-1 h-12 w-12 rounded-xl text-4xl leading-none text-[#c5a36f] active:bg-[#c5a36f]/10"
+            className="shrink-0 -mr-1 -mt-1 h-12 w-12 rounded-xl text-4xl leading-none text-og-accent-text active:bg-og-accent/10"
           >
             ×
           </button>
@@ -101,7 +101,7 @@ export function QuitRoundModal({
               type="button"
               onClick={onSaveForLater}
               data-control="quit-save"
-              className={`${bigBtn} bg-[#c5a36f] text-[#051b14]`}
+              className={`${bigBtn} bg-og-accent text-og-on-accent`}
             >
               <span className="text-lg font-bold leading-tight">Save and continue later</span>
               <span className="text-xs opacity-80">Keeps every score · resume from Home</span>
@@ -110,7 +110,7 @@ export function QuitRoundModal({
               type="button"
               onClick={() => setStep("restart")}
               data-control="quit-restart"
-              className={`${bigBtn} border-2 border-red-400/70 text-red-400 active:bg-red-500/10`}
+              className={`${bigBtn} border-2 border-og-danger text-og-danger active:bg-og-danger/10`}
             >
               <span className="text-lg font-bold leading-tight">Start this round again</span>
               <span className="text-xs opacity-80">Clears scores · same course and players</span>
@@ -119,7 +119,7 @@ export function QuitRoundModal({
               type="button"
               onClick={() => setStep("delete")}
               data-control="quit-delete"
-              className={`${bigBtn} border-2 border-red-500 bg-red-500/10 text-red-400 active:bg-red-500/20`}
+              className={`${bigBtn} border-2 border-og-danger bg-og-danger/10 text-og-danger active:bg-og-danger/20`}
             >
               <span className="text-lg font-bold leading-tight">Quit and delete</span>
               <span className="text-xs opacity-80">Removes this round · cannot be undone</span>

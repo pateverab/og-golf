@@ -107,7 +107,7 @@ export function LiveStrokeClicker({
       <div className="w-full max-w-md mx-auto flex flex-col justify-center gap-[clamp(8px,2dvh,20px)]">
         <div className="text-center">
           <div className="text-sm font-semibold truncate">{playerName}</div>
-          <div className="text-sm tracking-[0.2em] text-[#c5a36f]/80 mt-1">HOLED OUT</div>
+          <div className="text-sm tracking-[0.2em] text-og-muted mt-1">HOLED OUT</div>
           <div
             className="text-[clamp(44px,10dvh,80px)] font-bold tabular-nums leading-none mt-2"
             data-control="committed-score"
@@ -117,7 +117,7 @@ export function LiveStrokeClicker({
           {vsPar !== null && (
             <div
               className={`text-base font-semibold mt-2 ${
-                vsPar > 0 ? "text-red-400" : vsPar < 0 ? "text-emerald-400" : "text-[#c5a36f]"
+                vsPar > 0 ? "text-og-danger" : vsPar < 0 ? "text-og-success" : "text-og-accent-text"
               }`}
             >
               {formatVsPar(vsPar)} vs par
@@ -129,7 +129,7 @@ export function LiveStrokeClicker({
             type="button"
             onClick={onEditManual}
             data-control="edit-score"
-            className="w-full h-[clamp(44px,7dvh,60px)] rounded-2xl text-base font-semibold border-2 border-[#c5a36f]/50 text-[#c5a36f] active:bg-[#c5a36f]/10"
+            className="w-full h-[clamp(44px,7dvh,60px)] rounded-2xl text-base font-semibold border-2 border-og-border text-og-accent-text active:bg-og-accent/10"
           >
             Edit score
           </button>
@@ -142,8 +142,8 @@ export function LiveStrokeClicker({
     <div className="w-full max-w-md mx-auto flex flex-col justify-center gap-[clamp(4px,1dvh,12px)]">
       {/* Lying / next shot in one compact row */}
       <div className="grid grid-cols-2 gap-[clamp(6px,1.2dvh,12px)] h-[clamp(36px,7dvh,72px)]">
-        <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] px-3 flex items-center justify-between">
-          <span className="text-[11px] tracking-wider text-[#c5a36f]/80">LYING</span>
+        <div className="rounded-xl bg-og-raised px-3 flex items-center justify-between">
+          <span className="text-[11px] tracking-wider text-og-muted">LYING</span>
           <span
             className="text-[clamp(22px,4.4dvh,40px)] font-bold tabular-nums leading-none"
             data-control="lying"
@@ -151,9 +151,9 @@ export function LiveStrokeClicker({
             {lying}
           </span>
         </div>
-        <div className="rounded-xl bg-golf-green-50 dark:bg-[#153a2a] px-3 flex items-center justify-between">
-          <span className="text-[11px] tracking-wider text-[#c5a36f]/80">NEXT SHOT</span>
-          <span className="text-[clamp(22px,4.4dvh,40px)] font-bold tabular-nums leading-none text-[#c5a36f]">
+        <div className="rounded-xl bg-og-raised px-3 flex items-center justify-between">
+          <span className="text-[11px] tracking-wider text-og-muted">NEXT SHOT</span>
+          <span className="text-[clamp(22px,4.4dvh,40px)] font-bold tabular-nums leading-none text-og-accent-text">
             {nextShot}
           </span>
         </div>
@@ -172,10 +172,10 @@ export function LiveStrokeClicker({
               data-control={`lie-${opt.id}`}
               className={`h-[clamp(32px,5.6dvh,52px)] rounded-xl text-[clamp(13px,2dvh,16px)] font-semibold border-2 transition active:scale-[0.97] ${
                 active
-                  ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
+                  ? "bg-og-accent text-og-on-accent border-og-chip-selected-border"
                   : strokeEnabled
-                    ? "bg-white dark:bg-[#0a2e1f] text-[#c5a36f] border-[#c5a36f]/35"
-                    : "bg-white dark:bg-[#0a2e1f] text-[#c5a36f] border-[#c5a36f]/80"
+                    ? "bg-og-chip text-og-accent-text border-og-chip-border"
+                    : "bg-og-chip text-og-accent-text border-og-accent-line"
               }`}
             >
               {opt.label}
@@ -195,13 +195,13 @@ export function LiveStrokeClicker({
         data-control="plus1"
         className={`w-full h-[clamp(64px,12dvh,104px)] rounded-3xl font-extrabold tracking-wide transition flex flex-col items-center justify-center leading-none ${
           strokeEnabled
-            ? "bg-[#c5a36f] text-[#051b14] shadow-lg active:opacity-90 active:scale-[0.985]"
-            : "pointer-events-none bg-[#c5a36f]/25 text-[#051b14]/60 dark:text-golf-cream/50 border-2 border-dashed border-[#c5a36f]/40"
+            ? "bg-og-accent text-og-on-accent border-2 border-og-plus-border shadow-lg active:opacity-90 active:scale-[0.985]"
+            : "pointer-events-none bg-og-disabled-bg text-og-disabled-text border-2 border-dashed border-og-disabled-border"
         }`}
       >
         <span className="text-[clamp(24px,4.4dvh,36px)]">+1 Stroke</span>
         {!strokeEnabled && (
-          <span id="og-lie-hint" data-control="lie-hint" className="mt-1.5 px-2 text-[11px] font-semibold tracking-normal leading-tight text-[#c5a36f]">
+          <span id="og-lie-hint" data-control="lie-hint" className="mt-1.5 px-2 text-[11px] font-semibold tracking-normal leading-tight text-og-accent-text">
             {LIE_REQUIRED_HINT}
           </span>
         )}
@@ -214,7 +214,7 @@ export function LiveStrokeClicker({
           disabled={liveCount <= 0}
           aria-label="Undo last stroke"
           data-control="undo"
-          className="h-[clamp(40px,7dvh,64px)] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 disabled:opacity-40 transition"
+          className="h-[clamp(40px,7dvh,64px)] rounded-2xl border-2 border-og-border text-og-accent-text text-base font-bold active:bg-og-accent/15 disabled:opacity-40 transition"
         >
           − Undo
         </button>
@@ -223,7 +223,7 @@ export function LiveStrokeClicker({
           onClick={handlePenalty}
           aria-label="Add penalty stroke"
           data-control="penalty"
-          className="h-[clamp(40px,7dvh,64px)] rounded-2xl border-2 border-[#c5a36f]/60 text-[#c5a36f] text-base font-bold active:bg-[#c5a36f]/15 active:scale-[0.985] transition"
+          className="h-[clamp(40px,7dvh,64px)] rounded-2xl border-2 border-og-penalty-border text-og-accent-text text-base font-bold active:bg-og-accent/15 active:scale-[0.985] transition"
         >
           +1 Penalty
         </button>
@@ -234,13 +234,13 @@ export function LiveStrokeClicker({
         onClick={onHoleOut}
         disabled={!canHoleOut}
         data-control="holeout"
-        className="w-full h-[clamp(44px,7.5dvh,68px)] rounded-2xl border-2 border-[#c5a36f] bg-[#0a2e1f] text-[#c5a36f] text-lg font-bold tracking-wide active:bg-[#c5a36f] active:text-[#051b14] disabled:opacity-40 disabled:active:bg-[#0a2e1f] disabled:active:text-[#c5a36f] transition"
+        className="w-full h-[clamp(44px,7.5dvh,68px)] rounded-2xl border-2 border-og-accent-line bg-og-primary text-og-on-primary text-lg font-bold tracking-wide active:bg-og-accent active:text-og-on-accent disabled:opacity-40 disabled:active:bg-og-primary disabled:active:text-og-on-primary transition"
       >
         HOLE OUT{liveCount > 0 ? ` · ${liveCount}` : ""}
       </button>
 
       <div className="flex items-center justify-between gap-2 h-[clamp(20px,3.2dvh,32px)] px-0.5 text-xs">
-        <span className="min-w-0 truncate text-[#c5a36f]/80 tabular-nums">
+        <span className="min-w-0 truncate text-og-muted tabular-nums">
           {playerName}
           {vsPar !== null && liveCount > 0 ? ` · live ${formatVsPar(vsPar)}` : ""}
         </span>
@@ -249,7 +249,7 @@ export function LiveStrokeClicker({
             type="button"
             onClick={onManual}
             data-control="manual"
-            className="shrink-0 h-full px-2 text-[#c5a36f]/80 underline underline-offset-2"
+            className="shrink-0 h-full px-2 text-og-muted underline underline-offset-2"
           >
             Manual score
           </button>

@@ -91,8 +91,8 @@ export function LiveLeaderboard({
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-3 px-1">
-        <span className="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-pulse" aria-hidden="true" />
-        <div className="uppercase tracking-[1.5px] text-xs font-semibold text-[#c5a36f]">
+        <span className="inline-block w-2 h-2 bg-og-success rounded-full animate-pulse" aria-hidden="true" />
+        <div className="uppercase tracking-[1.5px] text-xs font-semibold text-og-accent-text">
           Live Leaderboard
         </div>
       </div>
@@ -100,14 +100,14 @@ export function LiveLeaderboard({
       <div className="golf-card rounded-3xl overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-xs text-[#c5a36f] border-b border-golf-green-200 dark:border-[#0f3d24]">
+            <tr className="text-left text-xs text-og-accent-text border-b border-og-divider">
               <th className="py-3 px-4 font-medium w-12 text-center">#</th>
               <th className="py-3 px-2 font-medium">Player</th>
               <th className="py-3 px-2 font-medium text-center">Total</th>
               <th className="py-3 px-4 font-medium text-right">vs Par</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-golf-green-100 dark:divide-[#0f3d24]/60 text-sm">
+          <tbody className="divide-y divide-og-divider text-sm">
             {entries.map((entry) => {
               const isLeader = entry.player.id === leaderId;
               const hasScores = entry.holesPlayed > 0;
@@ -117,18 +117,18 @@ export function LiveLeaderboard({
                   key={entry.player.id}
                   className={`leaderboard-row transition-colors ${
                     isLeader
-                      ? "bg-golf-gold/15 dark:bg-golf-gold/10 border-l-4 border-golf-gold"
+                      ? "bg-og-accent/10 border-l-4 border-og-accent-line"
                       : ""
                   }`}
                 >
-                  <td className="py-3.5 px-4 text-center font-bold tabular-nums text-[#c5a36f]">
+                  <td className="py-3.5 px-4 text-center font-bold tabular-nums text-og-accent-text">
                     {hasScores ? entry.rank : "—"}
                   </td>
                   <td className="py-3.5 px-2 font-medium">
                     <div className="flex items-center gap-2">
                       <span>{entry.player.name}</span>
                       {isLeader && (
-                        <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-golf-gold text-golf-green-900">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-og-accent text-og-on-accent">
                           Leader
                         </span>
                       )}
@@ -140,17 +140,17 @@ export function LiveLeaderboard({
                   <td
                     className={`py-3.5 px-4 text-right font-semibold tabular-nums ${
                       !hasScores
-                        ? "text-[#c5a36f]/50"
+                        ? "text-og-muted"
                         : entry.vsPar < 0
-                          ? "text-emerald-400"
+                          ? "text-og-success"
                           : entry.vsPar > 0
-                            ? "text-red-400"
+                            ? "text-og-danger"
                             : ""
                     }`}
                   >
                     {hasScores ? formatVsPar(entry.vsPar) : "—"}
                     {hasScores && (
-                      <span className="text-[10px] text-[#c5a36f]/50 ml-1.5 font-normal">
+                      <span className="text-[10px] text-og-muted ml-1.5 font-normal">
                         ({entry.holesPlayed} {entry.holesPlayed === 1 ? "hole" : "holes"})
                       </span>
                     )}

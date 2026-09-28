@@ -42,12 +42,12 @@ export function PlayerDetailModal({
   const formatLabel = getRoundFormatLabel(course, roundConfig);
 
   const getScoreColor = (vsPar: number | null) => {
-    if (vsPar === null) return 'text-gray-400';
-    if (vsPar < -1) return 'text-emerald-600 font-bold'; // Eagle or better
-    if (vsPar === -1) return 'text-emerald-600';           // Birdie
-    if (vsPar === 0) return 'text-gray-800';               // Par
-    if (vsPar === 1) return 'text-orange-600';             // Bogey
-    return 'text-red-600';                                 // Double bogey or worse
+    if (vsPar === null) return 'text-og-muted';
+    if (vsPar < -1) return 'text-og-success font-bold'; // Eagle or better
+    if (vsPar === -1) return 'text-og-success';           // Birdie
+    if (vsPar === 0) return 'text-og-text';               // Par
+    if (vsPar === 1) return 'text-og-danger';             // Bogey
+    return 'text-og-danger';                                 // Double bogey or worse
   };
 
   const getScoreEmoji = (vsPar: number | null) => {
@@ -62,23 +62,23 @@ export function PlayerDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Round Details - ${player.name}`}>
       <div className="space-y-6">
-        <div className="text-sm text-gray-500 dark:text-golf-gold/70">{formatLabel}</div>
+        <div className="text-sm text-og-muted">{formatLabel}</div>
 
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Total Score</div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-golf-cream">{totalScore}</div>
+          <div className="bg-og-surface p-4 rounded-xl text-center">
+            <div className="text-sm text-og-muted">Total Score</div>
+            <div className="text-3xl font-bold text-og-text">{totalScore}</div>
           </div>
-          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500 dark:text-golf-gold/70">Vs Par</div>
-            <div className={`text-3xl font-bold ${vsPar >= 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+          <div className="bg-og-surface p-4 rounded-xl text-center">
+            <div className="text-sm text-og-muted">Vs Par</div>
+            <div className={`text-3xl font-bold ${vsPar >= 0 ? 'text-og-danger' : 'text-og-success'}`}>
               {vsPar >= 0 ? '+' : ''}{vsPar}
             </div>
           </div>
-          <div className="bg-gray-50 dark:bg-[#153a2a] p-4 rounded-xl text-center">
-            <div className="text-sm text-gray-500 dark:text-golf-gold/70">OG Index</div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-golf-cream">{player.handicap}</div>
-            <div className="text-[10px] text-gray-400 dark:text-golf-gold/50 mt-1">Not USGA</div>
+          <div className="bg-og-surface p-4 rounded-xl text-center">
+            <div className="text-sm text-og-muted">OG Index</div>
+            <div className="text-3xl font-bold text-og-text">{player.handicap}</div>
+            <div className="text-[10px] text-og-muted mt-1">Not USGA</div>
           </div>
         </div>
 
@@ -88,7 +88,7 @@ export function PlayerDetailModal({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-[#2a5a48]">
+                <tr className="border-b border-og-border">
                   <th className="py-2 text-left font-medium">Hole</th>
                   <th className="py-2 text-center font-medium">Par</th>
                   <th className="py-2 text-center font-medium">Score</th>
@@ -97,7 +97,7 @@ export function PlayerDetailModal({
               </thead>
               <tbody>
                 {breakdown.map((hole) => (
-                  <tr key={hole.holeNumber} className="border-b border-gray-200 dark:border-[#2a5a48] hover:bg-gray-50 dark:hover:bg-[#153a2a]/50">
+                  <tr key={hole.holeNumber} className="border-b border-og-border hover:bg-og-surface/50">
                     <td className="py-3 font-medium">#{hole.holeNumber}</td>
                     <td className="py-3 text-center">{hole.par}</td>
                     <td className="py-3 text-center font-semibold">

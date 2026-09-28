@@ -46,22 +46,22 @@ export function PlayCardOverlay({
 
   return (
     <div
-      className="og-card-overlay bg-golf-cream text-golf-green-900 dark:bg-[#0a2e1f] dark:text-golf-cream"
+      className="og-card-overlay bg-og-bg text-og-text"
       role="dialog"
       aria-modal="true"
       aria-label="Scorecard"
       data-control="card-overlay"
     >
-      <div className="flex-none flex items-center justify-between gap-3 px-4 py-3 border-b border-golf-green-100 dark:border-[#1a4a2f]">
+      <div className="flex-none flex items-center justify-between gap-3 px-4 py-3 border-b border-og-divider">
         <div className="min-w-0">
-          <div className="text-[11px] tracking-wider text-[#c5a36f] truncate">{course.name}</div>
+          <div className="text-[11px] tracking-wider text-og-accent-text truncate">{course.name}</div>
           <div className="text-xl font-semibold">Scorecard</div>
         </div>
         <button
           type="button"
           onClick={onClose}
           data-control="card-close"
-          className="shrink-0 h-14 min-w-[112px] px-5 rounded-2xl bg-[#c5a36f] text-[#051b14] text-lg font-bold active:opacity-90"
+          className="shrink-0 h-14 min-w-[112px] px-5 rounded-2xl bg-og-accent text-og-on-accent text-lg font-bold active:opacity-90"
         >
           Close
         </button>
@@ -76,13 +76,13 @@ export function PlayCardOverlay({
           roundConfig={activeRound}
         />
 
-        <div className="uppercase tracking-[1.5px] text-xs font-semibold text-[#c5a36f] mb-2 px-1">
+        <div className="uppercase tracking-[1.5px] text-xs font-semibold text-og-accent-text mb-2 px-1">
           Hole by hole · tap a hole to jump
         </div>
         <div className="golf-card rounded-3xl overflow-hidden">
           <table className="w-full table-fixed text-sm">
             <thead>
-              <tr className="text-xs text-[#c5a36f] border-b border-golf-green-200 dark:border-[#0f3d24]">
+              <tr className="text-xs text-og-accent-text border-b border-og-divider">
                 <th className="py-2.5 pl-3 text-left font-medium w-14">Hole</th>
                 <th className="py-2.5 text-center font-medium w-11">Par</th>
                 {roster.map((p) => (
@@ -92,7 +92,7 @@ export function PlayCardOverlay({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-golf-green-100 dark:divide-[#0f3d24]/60">
+            <tbody className="divide-y divide-og-divider">
               {holesInPlay.map((hole) => {
                 const par = parFor(hole);
                 const isCurrent = hole === currentHole;
@@ -101,15 +101,15 @@ export function PlayCardOverlay({
                     key={hole}
                     onClick={() => onJumpToHole(hole)}
                     data-control={`card-hole-${hole}`}
-                    className={`cursor-pointer active:bg-[#c5a36f]/15 ${
-                      isCurrent ? "bg-[#c5a36f]/15" : ""
+                    className={`cursor-pointer active:bg-og-accent/15 ${
+                      isCurrent ? "bg-og-now-bg" : ""
                     }`}
                   >
                     <td className="py-2 pl-3 font-semibold tabular-nums">
                       {hole}
-                      {isCurrent && <span className="ml-1 text-[10px] text-[#c5a36f]">●</span>}
+                      {isCurrent && <span className="ml-1 text-[10px] text-og-accent-text">●</span>}
                     </td>
-                    <td className="py-2 text-center tabular-nums text-[#c5a36f]">{par}</td>
+                    <td className="py-2 text-center tabular-nums text-og-accent-text">{par}</td>
                     {roster.map((p) => (
                       <td key={p.id} className="py-2 px-1 text-center tabular-nums">
                         <MarkedScore score={getPlayerScoreOnHole(activeRound, p.id, hole)} par={par} />
@@ -118,9 +118,9 @@ export function PlayCardOverlay({
                   </tr>
                 );
               })}
-              <tr className="font-semibold border-t-2 border-[#c5a36f]/40">
+              <tr className="font-semibold border-t-2 border-og-border">
                 <td className="py-2.5 pl-3">Tot</td>
-                <td className="py-2.5 text-center tabular-nums text-[#c5a36f]">{totalPar}</td>
+                <td className="py-2.5 text-center tabular-nums text-og-accent-text">{totalPar}</td>
                 {roster.map((p) => {
                   const total = getActiveTotalForPlayer(activeRound, course, p.id);
                   const vs = getActiveVsParForPlayer(activeRound, course, p.id);
@@ -130,7 +130,7 @@ export function PlayCardOverlay({
                       {total > 0 && (
                         <div
                           className={`text-[11px] ${
-                            vs < 0 ? "text-emerald-400" : vs > 0 ? "text-red-400" : "text-[#c5a36f]"
+                            vs < 0 ? "text-og-success" : vs > 0 ? "text-og-danger" : "text-og-accent-text"
                           }`}
                         >
                           {formatVsPar(vs)}

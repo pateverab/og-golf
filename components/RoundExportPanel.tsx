@@ -78,7 +78,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
   };
 
   return (
-    <div className="mt-6 pt-6 border-t border-golf-green-100 dark:border-[#2a5a48]">
+    <div className="mt-6 pt-6 border-t border-og-border">
       <h3 className="text-lg font-semibold mb-4">Export Round</h3>
 
       <div className="grid grid-cols-2 gap-3">
@@ -86,7 +86,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
           type="button"
           onClick={handleDownloadPdf}
           disabled={loading !== null}
-          className="py-3.5 px-4 rounded-2xl bg-[#c5a36f] text-[#051b14] font-semibold hover:bg-white transition disabled:opacity-50"
+          className="py-3.5 px-4 rounded-2xl bg-og-accent text-og-on-accent font-semibold hover:bg-og-accent-hover transition disabled:opacity-50"
         >
           {loading === "pdf-download" ? "Generating…" : "Download PDF"}
         </button>
@@ -95,7 +95,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
           type="button"
           onClick={handleShareImage}
           disabled={loading !== null}
-          className="py-3.5 px-4 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50"
+          className="py-3.5 px-4 rounded-2xl border border-og-accent-line text-og-accent-text font-semibold hover:bg-og-raised transition disabled:opacity-50"
         >
           {loading === "image-share" ? "Capturing…" : "Share Image"}
         </button>
@@ -105,7 +105,7 @@ export function RoundExportPanel({ round, course, players }: RoundExportPanelPro
         type="button"
         onClick={handleShareCopy}
         disabled={loading !== null}
-        className="mt-3 w-full py-2.5 text-sm text-[#c5a36f] font-medium hover:underline disabled:opacity-50"
+        className="mt-3 w-full py-2.5 text-sm text-og-accent-text font-medium hover:underline disabled:opacity-50"
       >
         {loading === "text-share" ? "Sharing…" : "Share a Copy"}
       </button>

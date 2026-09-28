@@ -59,7 +59,7 @@ export function HoleSummaryStrip({
           <div
             key={`pad-${i}`}
             aria-hidden="true"
-            className="og-strip-cell rounded-xl border border-dashed border-golf-green-100/60 dark:border-[#2a5a48]/60"
+            className="og-strip-cell rounded-xl border border-dashed border-og-border/60"
           />
         ))}
         {holes.map((hole) => {
@@ -79,18 +79,18 @@ export function HoleSummaryStrip({
               aria-label={`Hole ${hole}, par ${par}${score !== null ? `, scored ${score}` : live > 0 ? `, ${live} in play` : ""}`}
               className={`og-strip-cell rounded-xl border-2 px-1.5 py-1 flex flex-col justify-between leading-none transition active:scale-[0.97] ${
                 isNow
-                  ? "border-[#c5a36f] bg-[#c5a36f]/15"
-                  : "border-golf-green-100 dark:border-[#2a5a48] bg-white dark:bg-[#153a2a]"
+                  ? "border-og-accent-line bg-og-now-bg"
+                  : "border-og-border bg-og-surface"
               }`}
             >
               <span className="flex items-center justify-between gap-1 w-full">
                 <span className="text-[clamp(13px,2.2dvh,16px)] font-bold tabular-nums">{hole}</span>
                 {isNow ? (
-                  <span className="text-[9px] font-extrabold tracking-wider px-1 py-0.5 rounded bg-[#c5a36f] text-[#051b14]">
+                  <span className="text-[9px] font-extrabold tracking-wider px-1 py-0.5 rounded bg-og-accent text-og-on-accent">
                     NOW
                   </span>
                 ) : null}
-                <span className="text-[10px] font-semibold text-[#c5a36f]/80 tabular-nums">P{par}</span>
+                <span className="text-[10px] font-semibold text-og-muted tabular-nums">P{par}</span>
               </span>
               <span className="flex items-center justify-center w-full text-[clamp(14px,2.4dvh,17px)] tabular-nums min-h-[24px]">
                 {score !== null ? (
@@ -98,13 +98,13 @@ export function HoleSummaryStrip({
                 ) : live > 0 ? (
                   <span className="flex items-center gap-1" data-strip-live="1">
                     <span className="font-bold">{live}</span>
-                    <span className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-400 tracking-wide">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
+                    <span className="flex items-center gap-0.5 text-[9px] font-semibold text-og-live tracking-wide">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-og-live animate-pulse" aria-hidden="true" />
                       in play
                     </span>
                   </span>
                 ) : (
-                  <span className="text-[#c5a36f]/40">—</span>
+                  <span className="text-og-muted">—</span>
                 )}
               </span>
             </button>

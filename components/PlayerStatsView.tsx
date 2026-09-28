@@ -15,6 +15,14 @@ import type { Player, Round, Course } from "@/lib/types";
 import { getPlayerStats } from "@/lib/calculations";
 import { resolveTheme } from "@/lib/theme";
 
+/** rgb()/rgba() string for an og-* theme token (see app/globals.css). */
+function themeColor(varName: string, alpha = 1): string {
+  if (typeof document === "undefined") return "currentColor";
+  const channels = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  if (!channels) return "currentColor";
+  return alpha < 1 ? `rgb(${channels} / ${alpha})` : `rgb(${channels})`;
+}
+
 interface PlayerStatsViewProps {
   players: Player[];
   rounds: Round[];
@@ -69,13 +77,14 @@ export function PlayerStatsView({
     ? getPlayerStats(selectedPlayer, completedRounds, courses)
     : null;
 
+  // Recharts takes plain color strings: read the active scheme's tokens (re-read when the theme flips).
   const chartColors = {
-    line: "#c5a36f",
-    grid: isDark ? "rgba(197, 163, 111, 0.12)" : "rgba(5, 27, 20, 0.08)",
-    axis: isDark ? "rgba(197, 163, 111, 0.6)" : "rgba(5, 27, 20, 0.45)",
-    tooltipBg: isDark ? "#1f4a3a" : "#ffffff",
-    tooltipBorder: isDark ? "#2a5a48" : "#d4e8d4",
-    tooltipText: isDark ? "#f5f3eb" : "#051b14",
+    line: themeColor("--og-accent-line"),
+    grid: themeColor("--og-border", isDark ? 0.35 : 0.25),
+    axis: themeColor("--og-muted"),
+    tooltipBg: themeColor("--og-raised"),
+    tooltipBorder: themeColor("--og-border"),
+    tooltipText: themeColor("--og-text"),
   };
 
   if (sortedPlayers.length === 0) {
@@ -83,12 +92,12 @@ export function PlayerStatsView({
       <div>
         <div className="mb-6 px-1">
           <h2 className="text-2xl font-semibold">Player Statistics</h2>
-          <p className="text-sm text-[#c5a36f]/80 mt-1">
+          <p className="text-sm text-og-muted mt-1">
             Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
         </div>
         <div className="golf-card rounded-3xl p-10 text-center">
-          <p className="text-[#c5a36f]/70 mb-6">
+          <p className="text-og-muted mb-6">
             Add players from the Home tab, or load sample data to explore stats, history, and the Live Leaderboard.
           </p>
           {onLoadTestData && (
@@ -96,7 +105,7 @@ export function PlayerStatsView({
               type="button"
               onClick={onLoadTestData}
               disabled={testDataLoaded}
-              className="px-6 py-3 rounded-2xl border border-[#c5a36f] text-[#c5a36f] font-semibold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-2xl border border-og-accent-line text-og-accent-text font-semibold hover:bg-og-raised transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testDataLoaded ? "Test Data Loaded" : "Load Test Data"}
             </button>
@@ -111,7 +120,7 @@ export function PlayerStatsView({
       <div className="mb-6 px-1 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold">Player Statistics</h2>
-          <p className="text-sm text-[#c5a36f]/80 mt-1">
+          <p className="text-sm text-og-muted mt-1">
             Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
         </div>
@@ -119,7 +128,7 @@ export function PlayerStatsView({
           <button
             type="button"
             onClick={onLoadTestData}
-            className="shrink-0 px-4 py-2 rounded-xl border border-[#c5a36f]/60 text-sm text-[#c5a36f] font-medium hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition"
+            className="shrink-0 px-4 py-2 rounded-xl border border-og-border text-sm text-og-accent-text font-medium hover:bg-og-raised transition"
           >
             Load Test Data
           </button>
@@ -134,8 +143,8 @@ export function PlayerStatsView({
             onClick={() => setSelectedPlayerId(player.id)}
             className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
               selectedPlayerId === player.id
-                ? "bg-golf-gold text-golf-green-900 font-semibold"
-                : "bg-golf-green-100 dark:bg-[#153a2a] text-[#c5a36f] hover:border-[#c5a36f]/40 border border-transparent"
+                ? "bg-og-accent text-og-on-accent font-semibold"
+                : "bg-og-surface text-og-accent-text hover:border-og-accent-line/40 border border-transparent"
             }`}
           >
             {player.name}
@@ -148,33 +157,33 @@ export function PlayerStatsView({
           {/* Summary stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="golf-card rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-[#c5a36f]/70">Rounds Played</div>
+              <div className="text-xs uppercase tracking-wider text-og-muted">Rounds Played</div>
               <div className="text-3xl font-semibold tabular-nums mt-1">{stats.totalRounds}</div>
             </div>
             <div className="golf-card rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-[#c5a36f]/70">Avg Score</div>
+              <div className="text-xs uppercase tracking-wider text-og-muted">Avg Score</div>
               <div className="text-3xl font-semibold tabular-nums mt-1">
                 {stats.totalRounds > 0 ? stats.averageScore : "—"}
               </div>
             </div>
             <div className="golf-card rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-[#c5a36f]/70">Best Round</div>
-              <div className="text-3xl font-semibold tabular-nums mt-1 text-emerald-400">
+              <div className="text-xs uppercase tracking-wider text-og-muted">Best Round</div>
+              <div className="text-3xl font-semibold tabular-nums mt-1 text-og-success">
                 {stats.bestRound ? stats.bestRound.totalScore : "—"}
               </div>
               {stats.bestRound && (
-                <div className="text-[10px] text-[#c5a36f]/60 mt-1 truncate">
+                <div className="text-[10px] text-og-muted mt-1 truncate">
                   {new Date(stats.bestRound.date).toLocaleDateString()} • {formatVsPar(stats.bestRound.scoreVsPar)}
                 </div>
               )}
             </div>
             <div className="golf-card rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-[#c5a36f]/70">Worst Round</div>
-              <div className="text-3xl font-semibold tabular-nums mt-1 text-red-400">
+              <div className="text-xs uppercase tracking-wider text-og-muted">Worst Round</div>
+              <div className="text-3xl font-semibold tabular-nums mt-1 text-og-danger">
                 {stats.worstRound ? stats.worstRound.totalScore : "—"}
               </div>
               {stats.worstRound && (
-                <div className="text-[10px] text-[#c5a36f]/60 mt-1 truncate">
+                <div className="text-[10px] text-og-muted mt-1 truncate">
                   {new Date(stats.worstRound.date).toLocaleDateString()} • {formatVsPar(stats.worstRound.scoreVsPar)}
                 </div>
               )}
@@ -186,9 +195,9 @@ export function PlayerStatsView({
             <div className="flex items-baseline justify-between mb-4 px-1">
               <div>
                 <h3 className="text-lg font-semibold">OG Index History</h3>
-                <p className="text-xs text-[#c5a36f]/70 mt-0.5">
-                  Current OG index: <span className="font-semibold text-[#c5a36f]">{selectedPlayer.handicap}</span>
-                  <span className="text-[#c5a36f]/50"> · not USGA</span>
+                <p className="text-xs text-og-muted mt-0.5">
+                  Current OG index: <span className="font-semibold text-og-accent-text">{selectedPlayer.handicap}</span>
+                  <span className="text-og-muted"> · not USGA</span>
                 </p>
               </div>
             </div>
@@ -247,7 +256,7 @@ export function PlayerStatsView({
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-[#c5a36f]/60 text-sm">
+              <div className="h-48 flex items-center justify-center text-og-muted text-sm">
                 Complete a round to start tracking OG index history.
               </div>
             )}

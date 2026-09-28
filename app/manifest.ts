@@ -12,8 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#0f3d24",
-    theme_color: "#c5a36f",
+    // Clubhouse background (splash / install surfaces).
+    background_color: "#06231a",
+    theme_color: "#06231a",
     icons: [
       {
         src: "/icons/icon-192.png",
