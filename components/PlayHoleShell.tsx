@@ -50,8 +50,13 @@ function formatVsPar(vsPar: number): string {
   return vsPar > 0 ? `+${vsPar}` : String(vsPar);
 }
 
+/** vs-par color on the Total plate (a deep-green scoreboard in Sunlight). */
+function totalVsParColor(vsPar: number): string {
+  return vsPar < 0 ? "text-og-total-success" : vsPar > 0 ? "text-og-total-danger" : "text-og-total-text";
+}
+
 function vsParColor(vsPar: number): string {
-  return vsPar < 0 ? "text-emerald-400" : vsPar > 0 ? "text-red-400" : "text-[#c5a36f]";
+  return vsPar < 0 ? "text-og-success" : vsPar > 0 ? "text-og-danger" : "text-og-accent-text";
 }
 
 /**
@@ -142,24 +147,24 @@ export function PlayHoleShell({
 
   return (
     <div
-      className="og-play-shell bg-golf-cream text-golf-green-900 dark:bg-[#0f3d24] dark:text-golf-cream"
+      className="og-play-shell bg-og-bg text-og-text"
       data-play-root
     >
       {/* Top bar: course, hole, par, Card, Quit */}
       <header className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(4px,1dvh,10px)] pb-[clamp(4px,1dvh,8px)] flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium tracking-wider text-[#c5a36f] truncate">
+          <div className="text-[11px] font-medium tracking-wider text-og-accent-text truncate">
             {course.name} · {formatLabel}
           </div>
           <div className="flex items-baseline gap-2 leading-tight">
             <span className="text-[clamp(20px,3.6dvh,28px)] font-bold tabular-nums" data-control="hole-title">
               Hole {currentHole}
             </span>
-            <span className="text-sm font-semibold px-2.5 py-px rounded-full bg-golf-green-100 dark:bg-[#1a4a2f] text-[#c5a36f]">
+            <span className="text-sm font-semibold px-2.5 py-px rounded-full bg-og-par-pill text-og-on-par-pill">
               Par {par}
             </span>
             {holeIndex >= 0 && (
-              <span className="text-[11px] text-[#c5a36f]/70 tabular-nums">
+              <span className="text-[11px] text-og-muted tabular-nums">
                 {holeIndex + 1}/{holesInPlay.length}
               </span>
             )}
@@ -169,7 +174,7 @@ export function PlayHoleShell({
           type="button"
           onClick={() => setCardOpen(true)}
           data-control="card"
-          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-4 rounded-xl border-2 border-[#c5a36f] text-[#c5a36f] text-sm font-bold active:bg-[#c5a36f]/15"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-4 rounded-xl border-2 border-og-accent-line text-og-accent-text text-sm font-bold active:bg-og-accent/15"
         >
           Card
         </button>
@@ -177,7 +182,7 @@ export function PlayHoleShell({
           type="button"
           onClick={() => setQuitOpen(true)}
           data-control="quit"
-          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3.5 rounded-xl border-2 border-red-400/60 text-red-400 text-sm font-bold active:bg-red-500/10"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3.5 rounded-xl border-2 border-og-danger text-og-danger text-sm font-bold active:bg-og-danger/10"
         >
           Quit
         </button>
@@ -217,10 +222,10 @@ export function PlayHoleShell({
                 data-control="player-chip"
                 className={`flex-1 min-w-0 h-[clamp(36px,6.5dvh,56px)] rounded-xl border-2 px-1.5 flex flex-col items-center justify-center leading-tight transition ${
                   selected
-                    ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
+                    ? "bg-og-accent text-og-on-accent border-og-chip-selected-border"
                     : score !== null
-                      ? "bg-white dark:bg-[#1f4a3a] border-[#c5a36f]/40 text-golf-green-900 dark:text-golf-cream"
-                      : "bg-golf-green-50 dark:bg-[#153a2a] border-golf-green-100 dark:border-[#2a5a48]"
+                      ? "bg-og-raised border-og-border text-og-text"
+                      : "bg-og-surface border-og-border"
                 }`}
               >
                 <span className="max-w-full truncate text-[clamp(12px,1.9dvh,15px)] font-semibold">
@@ -228,7 +233,7 @@ export function PlayHoleShell({
                 </span>
                 <span
                   className={`text-[11px] tabular-nums font-semibold ${
-                    selected ? "text-[#051b14]/80" : score !== null ? vsParColor(score - par) : "text-[#c5a36f]/80"
+                    selected ? "text-og-on-accent/80" : score !== null ? vsParColor(score - par) : "text-og-muted"
                   }`}
                 >
                   {state}
@@ -245,7 +250,7 @@ export function PlayHoleShell({
           <div className="w-full max-w-md mx-auto flex flex-col justify-center gap-[clamp(8px,1.8dvh,16px)]">
             <div className="text-center">
               <div className="text-sm font-semibold truncate">{activeName}</div>
-              <div className="text-xs tracking-wider text-[#c5a36f]/80">MANUAL SCORE · HOLE {currentHole}</div>
+              <div className="text-xs tracking-wider text-og-muted">MANUAL SCORE · HOLE {currentHole}</div>
             </div>
             <div className="flex items-center justify-center gap-4">
               <button
@@ -283,7 +288,7 @@ export function PlayHoleShell({
             <button
               type="button"
               onClick={() => onSetToPar(activeId)}
-              className="w-full h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-[#c5a36f] bg-white dark:bg-[#1f4a3a] active:bg-[#c5a36f] active:text-[#051b14] text-base font-bold text-[#c5a36f] transition"
+              className="w-full h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-og-accent-line bg-og-raised active:bg-og-accent active:text-og-on-accent text-base font-bold text-og-accent-text transition"
             >
               Set to Par ({par})
             </button>
@@ -291,7 +296,7 @@ export function PlayHoleShell({
               <button
                 type="button"
                 onClick={() => onSetManual(activeId, false)}
-                className="h-full text-sm text-[#c5a36f]/90 underline underline-offset-2"
+                className="h-full text-sm text-og-accent-text underline underline-offset-2"
               >
                 Use stroke clicker
               </button>
@@ -328,29 +333,32 @@ export function PlayHoleShell({
           onClick={goPrev}
           disabled={holeIndex <= 0}
           data-control="prev"
-          className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-lg font-bold active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition"
+          className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-og-border text-og-accent-text text-lg font-bold active:bg-og-raised active:border-og-accent-line disabled:opacity-40 transition"
         >
           ← Prev
         </button>
-        <div className="min-w-[104px] max-w-[150px] flex flex-col items-center justify-center" data-control="totals">
-          <div className="max-w-full text-[10px] font-semibold tracking-wider text-[#c5a36f]/80 truncate leading-tight">
+        <div
+          className="min-w-[104px] max-w-[150px] flex flex-col items-center justify-center rounded-2xl bg-og-total-bg px-2.5 py-1"
+          data-control="totals"
+        >
+          <div className="max-w-full text-[10px] font-semibold tracking-wider text-og-total-label truncate leading-tight">
             TOTAL · {(activePlayer?.name.split(" ")[0] ?? "Player").toUpperCase()}
           </div>
           <div className="flex items-center gap-1.5">
             <span
-              className="text-[clamp(40px,7dvh,56px)] font-extrabold tabular-nums leading-none text-[#c5a36f]"
+              className="text-[clamp(40px,7dvh,56px)] font-extrabold tabular-nums leading-none text-og-total-text"
               data-control="total-value"
             >
               {total || "—"}
             </span>
             <span className="flex flex-col items-start leading-tight">
               {total ? (
-                <span className={`text-[clamp(13px,2.2dvh,17px)] font-bold tabular-nums ${vsParColor(vsPar)}`} data-control="total-vspar">
+                <span className={`text-[clamp(13px,2.2dvh,17px)] font-bold tabular-nums ${totalVsParColor(vsPar)}`} data-control="total-vspar">
                   {formatVsPar(vsPar)}
                 </span>
               ) : null}
               {liveCount > 0 && committed === null ? (
-                <span className="text-[10px] font-semibold tabular-nums text-golf-green-900/70 dark:text-golf-cream/70 whitespace-nowrap" data-control="total-live">
+                <span className="text-[10px] font-semibold tabular-nums text-og-total-sub whitespace-nowrap" data-control="total-live">
                   +{liveCount} this hole
                 </span>
               ) : null}
@@ -362,7 +370,7 @@ export function PlayHoleShell({
             type="button"
             onClick={onFinish}
             data-control="next"
-            className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-[#c5a36f] bg-[#c5a36f] text-[#051b14] text-base font-bold active:opacity-90 transition leading-tight"
+            className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-og-accent-line bg-og-accent text-og-on-accent text-base font-bold active:opacity-90 transition leading-tight"
           >
             Finish Round
           </button>
@@ -372,7 +380,7 @@ export function PlayHoleShell({
             onClick={goNext}
             disabled={holeIndex < 0}
             data-control="next"
-            className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-golf-green-100 dark:border-[#2a5a48] text-[#c5a36f] text-lg font-bold active:bg-golf-green-50 dark:active:bg-[#1f4a3a] active:border-[#c5a36f] disabled:opacity-40 transition"
+            className="h-[clamp(48px,8dvh,64px)] rounded-2xl border-2 border-og-border text-og-accent-text text-lg font-bold active:bg-og-raised active:border-og-accent-line disabled:opacity-40 transition"
           >
             Next →
           </button>

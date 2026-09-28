@@ -98,7 +98,7 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-[#c5a36f] mb-1">Course Name</label>
+        <label className="block text-sm font-medium text-og-accent-text mb-1">Course Name</label>
         <input
           type="text"
           value={name}
@@ -109,7 +109,7 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#c5a36f] mb-1">Location</label>
+        <label className="block text-sm font-medium text-og-accent-text mb-1">Location</label>
         <input
           type="text"
           value={location}
@@ -119,38 +119,38 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#c5a36f] mb-2">Hole Count</label>
+        <label className="block text-sm font-medium text-og-accent-text mb-2">Hole Count</label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setHoleCountAndResize(9)}
             className={`p-4 rounded-2xl border text-left transition ${
               holeCount === 9
-                ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]"
-                : "border-golf-green-100 dark:border-[#2a5a48]"
+                ? "border-og-accent-line bg-og-raised"
+                : "border-og-border"
             }`}
           >
             <div className="font-medium">9 Holes</div>
-            <div className="text-xs text-[#c5a36f]/70 mt-0.5">True 9-hole layout</div>
+            <div className="text-xs text-og-muted mt-0.5">True 9-hole layout</div>
           </button>
           <button
             type="button"
             onClick={() => setHoleCountAndResize(18)}
             className={`p-4 rounded-2xl border text-left transition ${
               holeCount === 18
-                ? "border-[#c5a36f] bg-white dark:bg-[#1f4a3a]"
-                : "border-golf-green-100 dark:border-[#2a5a48]"
+                ? "border-og-accent-line bg-og-raised"
+                : "border-og-border"
             }`}
           >
             <div className="font-medium">18 Holes</div>
-            <div className="text-xs text-[#c5a36f]/70 mt-0.5">Full course</div>
+            <div className="text-xs text-og-muted mt-0.5">Full course</div>
           </button>
         </div>
       </div>
 
       {!isEdit && (
         <div>
-          <label className="block text-sm font-medium text-[#c5a36f] mb-2">
+          <label className="block text-sm font-medium text-og-accent-text mb-2">
             Quick Start Templates
           </label>
           <div className="space-y-2">
@@ -159,10 +159,10 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
                 key={index}
                 type="button"
                 onClick={() => loadTemplate(template)}
-                className="w-full text-left p-4 rounded-2xl border border-golf-green-100 dark:border-[#2a5a48] hover:border-golf-gold hover:bg-golf-green-50 dark:hover:bg-[#1f4a3a] transition-all"
+                className="w-full text-left p-4 rounded-2xl border border-og-border hover:border-og-accent-line hover:bg-og-raised transition-all"
               >
                 <div className="font-medium">{template.name}</div>
-                <div className="text-xs text-[#c5a36f]/70">
+                <div className="text-xs text-og-muted">
                   {template.location} • {template.holeCount} holes
                 </div>
               </button>
@@ -172,13 +172,13 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
       )}
 
       <div>
-        <label className="block text-sm font-medium text-[#c5a36f] mb-3">
+        <label className="block text-sm font-medium text-og-accent-text mb-3">
           Hole Pars (adjust if needed)
         </label>
         <div className="grid grid-cols-6 gap-3">
           {holes.map((hole) => (
             <div key={hole.number} className="text-center">
-              <div className="text-xs text-[#c5a36f]/70 mb-1">H{hole.number}</div>
+              <div className="text-xs text-og-muted mb-1">H{hole.number}</div>
               <input
                 type="number"
                 value={hole.par}
@@ -196,13 +196,13 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3 rounded-xl border border-golf-green-100 dark:border-[#2a5a48] font-semibold"
+          className="flex-1 py-3 rounded-xl border border-og-border font-semibold"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="flex-1 py-3 rounded-xl bg-[#c5a36f] text-[#051b14] font-semibold"
+          className="flex-1 py-3 rounded-xl bg-og-accent text-og-on-accent font-semibold"
         >
           {isEdit ? "Save Changes" : "Save Course"}
         </button>

@@ -42,7 +42,7 @@ export function PlayerForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">Full Name</label>
+        <label className="block text-sm font-medium mb-1.5 text-og-accent-text">Full Name</label>
         <input
           type="text"
           value={name}
@@ -54,7 +54,7 @@ export function PlayerForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">
+        <label className="block text-sm font-medium mb-1.5 text-og-accent-text">
           Nickname (optional)
         </label>
         <input
@@ -67,7 +67,7 @@ export function PlayerForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5 text-[#c5a36f]">
+        <label className="block text-sm font-medium mb-1.5 text-og-accent-text">
           Starting OG Index
         </label>
         <div className="flex items-center gap-4">
@@ -78,7 +78,7 @@ export function PlayerForm({
             step={0.5}
             value={handicap}
             onChange={(e) => setHandicap(parseFloat(e.target.value))}
-            className="flex-1 accent-[#c5a36f]"
+            className="flex-1 accent-og-accent"
           />
           <div className="w-20">
             <input
@@ -91,12 +91,12 @@ export function PlayerForm({
           </div>
         </div>
         {isEdit && hasCalculatedIndex ? (
-          <p className="text-xs text-[#c5a36f]/70 mt-1.5">
+          <p className="text-xs text-og-muted mt-1.5">
             Current OG index is {initialPlayer!.handicap} (from rounds). Editing updates the
             stored starting/fallback value; displayed index stays calculated until rounds change.
           </p>
         ) : (
-          <p className="text-xs text-[#c5a36f]/70 mt-1.5">
+          <p className="text-xs text-og-muted mt-1.5">
             Kept until this player finishes ≥1 full round, then replaced by their OG index (not
             USGA).
           </p>
@@ -107,7 +107,7 @@ export function PlayerForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3.5 rounded-xl border border-golf-green-200 dark:border-[#0f3d24] font-semibold"
+          className="flex-1 py-3.5 rounded-xl border border-og-border font-semibold"
         >
           Cancel
         </button>

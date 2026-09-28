@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f3d24",
+  themeColor: "#06231a", // Clubhouse bg; lib/theme.ts applyTheme() swaps it for Sunlight
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -50,7 +50,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen bg-golf-cream text-golf-green-900 dark:bg-[#0f3d24] dark:text-golf-cream antialiased">
+      <body className="min-h-screen bg-og-bg text-og-text antialiased">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

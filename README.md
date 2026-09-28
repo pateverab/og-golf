@@ -29,8 +29,8 @@ All data is stored locally in your browser using localStorage. No accounts, no s
 - Round export: PDF download, image share, and text “Share a Copy” (with clipboard fallbacks)
 - Backup & restore via JSON (import confirms before overwrite)
 - PWA shell (installable on iPhone; Install CTA only on iOS Safari when not already installed)
-- Light/dark theme toggle
-- Premium dark green + gold golf-themed design with large touch targets
+- Two color schemes: **Clubhouse** (deep green + gold, the former dark mode) and **Sunlight** (high-contrast cream + deep green for bright outdoor light, the former light mode)
+- Premium green + gold golf-themed design with large touch targets
 
 ## Limitations
 
@@ -50,8 +50,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Design
 
-- Dark forest green (#0a2e1f) primary background
-- Gold accents (#c5a36f) for buttons and highlights
+- Colors are semantic theme tokens: CSS variables in `app/globals.css` (`:root` = Sunlight, `.dark` = Clubhouse) exposed to Tailwind as `og-*` classes (`bg-og-surface`, `text-og-accent-text`, `border-og-plus-border`, …). Add or change colors there, not as hex values in components.
+- Gold (`og-accent`) stays reserved for the +1 button, the Total and primary actions
+- The exported scorecard image/PDF (`components/RoundScorecard.tsx`, `lib/roundExport.ts`) keeps its own fixed colors so exports look the same in either scheme
 - Large touch-friendly controls optimized for quick score entry
 - Clean, modern typography and spacing
 
