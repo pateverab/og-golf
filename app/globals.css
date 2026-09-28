@@ -252,3 +252,26 @@ body.og-play-locked {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
+
+/* Top hole-summary strip: the ONLY horizontal finger scroller on the hole screen. */
+.og-hole-strip {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.og-hole-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Four cells per window (3 earlier holes + now), ~83-87px each on a phone. */
+.og-strip-cell {
+  flex: 0 0 calc((100% - 18px) / 4);
+  min-width: 0;
+  scroll-snap-align: end;
+}

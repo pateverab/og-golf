@@ -3,7 +3,8 @@
  *
  * While a round is active the document must never scroll, pan, rubber-band,
  * or pinch. The only thing allowed to move is an inner scroller explicitly
- * marked `data-og-scroll="1"` (the Card overlay, modals), and only while it
+ * marked `data-og-scroll="1"` (the Card overlay, modals, and the horizontal
+ * hole strip with `data-og-scroll-axis="x"`), and only along its axis while it
  * still has room to move in the drag direction, so a drag at its edge never
  * chains into the document.
  */
@@ -12,8 +13,15 @@ export const PLAY_LOCK_CLASS = "og-play-locked";
 export const SCROLL_ALLOW_ATTR = "data-og-scroll";
 export const SCROLL_ALLOW_VALUE = "1";
 export const SCROLL_ALLOW_SELECTOR = `[${SCROLL_ALLOW_ATTR}="${SCROLL_ALLOW_VALUE}"]`;
+/** Optional companion attribute: which axis the opted-in scroller moves on (default "y"). */
+export const SCROLL_AXIS_ATTR = "data-og-scroll-axis";
 
 export type ScrollAxis = "x" | "y" | "both";
+
+/** Parse `data-og-scroll-axis`; anything unknown or missing means vertical. */
+export function parseScrollAxis(value: string | null | undefined): ScrollAxis {
+  return value === "x" || value === "both" ? value : "y";
+}
 
 export interface ScrollMetrics {
   scrollTop: number;
@@ -68,6 +76,8 @@ export interface TouchMoveInput {
   scroller: ScrollMetrics | null;
   dx: number;
   dy: number;
+  /** Axis the scroller moves on (from `data-og-scroll-axis`); default "y". */
+  axis?: ScrollAxis;
 }
 
 /**
@@ -76,10 +86,10 @@ export interface TouchMoveInput {
  * outside an opted-in scroller everything is blocked; inside one, block only
  * when it cannot scroll further in the drag direction.
  */
-export function shouldBlockTouchMove({ touchCount, scroller, dx, dy }: TouchMoveInput): boolean {
+export function shouldBlockTouchMove({ touchCount, scroller, dx, dy, axis = "y" }: TouchMoveInput): boolean {
   if (touchCount > 1) return true;
   if (!scroller) return true;
-  return !shouldAllowTouchScroll(scroller, "y", dx, dy);
+  return !shouldAllowTouchScroll(scroller, axis, dx, dy);
 }
 
 /**

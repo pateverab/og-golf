@@ -7,7 +7,7 @@ import {
   getActiveVsParForPlayer,
   getPlayerScoreOnHole,
 } from "@/lib/activeRound";
-import { isCircleMark, isSquareMark, markRingCount, scoreMark } from "@/lib/scoreMarks";
+import { MarkedScore } from "@/components/MarkedScore";
 
 interface PlayCardOverlayProps {
   activeRound: ActiveRound;
@@ -22,25 +22,6 @@ interface PlayCardOverlayProps {
 function formatVsPar(vsPar: number): string {
   if (vsPar === 0) return "E";
   return vsPar > 0 ? `+${vsPar}` : String(vsPar);
-}
-
-/** Score digit with the scorecard mark (○ under par, □ over par). */
-function MarkedCell({ score, par }: { score: number | null; par: number }) {
-  if (score === null) return <span className="text-[#c5a36f]/40">—</span>;
-  const kind = scoreMark(score - par);
-  const rings = markRingCount(kind);
-  if (rings === 0) return <span className="font-semibold">{score}</span>;
-  const circle = isCircleMark(kind);
-  const color = circle ? "border-emerald-500" : isSquareMark(kind) ? "border-red-400" : "border-[#c5a36f]";
-  return (
-    <span
-      className={`inline-flex items-center justify-center min-w-[26px] h-[26px] px-1 border-2 font-semibold ${color} ${
-        circle ? "rounded-full" : "rounded-[3px]"
-      } ${rings > 1 ? "outline outline-2 outline-offset-1 " + (circle ? "outline-emerald-500/60" : "outline-red-400/60") : ""}`}
-    >
-      {score}
-    </span>
-  );
 }
 
 /**
@@ -131,7 +112,7 @@ export function PlayCardOverlay({
                     <td className="py-2 text-center tabular-nums text-[#c5a36f]">{par}</td>
                     {roster.map((p) => (
                       <td key={p.id} className="py-2 px-1 text-center tabular-nums">
-                        <MarkedCell score={getPlayerScoreOnHole(activeRound, p.id, hole)} par={par} />
+                        <MarkedScore score={getPlayerScoreOnHole(activeRound, p.id, hole)} par={par} />
                       </td>
                     ))}
                   </tr>

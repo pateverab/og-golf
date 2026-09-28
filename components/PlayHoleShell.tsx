@@ -7,10 +7,12 @@ import {
   getActiveVsParForPlayer,
   getLiveStrokes,
   getPlayerScoreOnHole,
+  getShotLogForHole,
   getStartingHoleForRound,
   pickNextUnscoredPlayer,
 } from "@/lib/activeRound";
 import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
+import { HoleSummaryStrip } from "@/components/HoleSummaryStrip";
 import { PlayCardOverlay } from "@/components/PlayCardOverlay";
 import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
@@ -24,7 +26,8 @@ export interface PlayHoleShellProps {
   formatLabel: string;
   manualScorePlayers: string[];
   onSetManual: (playerId: string, manual: boolean) => void;
-  onIncrement: (playerId: string, lie?: Lie) => void;
+  /** +1 Stroke: always carries the lie the shot was played from. */
+  onIncrement: (playerId: string, lie: Lie) => void;
   onDecrement: (playerId: string) => void;
   onPenalty: (playerId: string, lie?: Lie) => void;
   onHoleOut: (playerId: string) => void;
@@ -53,8 +56,9 @@ function vsParColor(vsPar: number): string {
 
 /**
  * The frozen hole screen. One fixed frame, exactly the screen (100dvh + safe
- * areas), with zero inner scroll: top bar, player chips (multiplayer), ONE
- * player's clicker, and a Prev / Next bottom bar. Leaderboard + per-hole grid
+ * areas), with zero document scroll: top bar, hole-summary strip (the only
+ * horizontal scroller), player chips (multiplayer), ONE player's clicker, and
+ * a Prev / Total / Next bottom bar. Leaderboard + per-hole grid
  * live behind the Card overlay. While mounted, html/body carry
  * `og-play-locked` and the document cannot scroll, pan, bounce, or pinch.
  */
@@ -109,6 +113,7 @@ export function PlayHoleShell({
   const showManual = manualScorePlayers.includes(activeId);
   const total = getActiveTotalForPlayer(activeRound, course, activeId);
   const vsPar = getActiveVsParForPlayer(activeRound, course, activeId);
+  const holeShots = getShotLogForHole(activeRound, activeId, currentHole);
 
   const handleHoleOut = () => {
     onHoleOut(activeId);
@@ -178,6 +183,16 @@ export function PlayHoleShell({
         </button>
       </header>
 
+      {/* Hole-summary strip for the selected player: 3 earlier holes + now, swipe for more, tap to jump. */}
+      <HoleSummaryStrip
+        activeRound={activeRound}
+        course={course}
+        holesInPlay={holesInPlay}
+        currentHole={currentHole}
+        playerId={activeId}
+        onJumpToHole={onGoToHole}
+      />
+
       {/* Player chips (multiplayer): tap to switch whose clicker is shown */}
       {isMulti && (
         <div
@@ -200,7 +215,7 @@ export function PlayHoleShell({
                 aria-selected={selected}
                 onClick={() => setSelectedId(pid)}
                 data-control="player-chip"
-                className={`flex-1 min-w-0 h-[clamp(40px,7dvh,56px)] rounded-xl border-2 px-1.5 flex flex-col items-center justify-center leading-tight transition ${
+                className={`flex-1 min-w-0 h-[clamp(36px,6.5dvh,56px)] rounded-xl border-2 px-1.5 flex flex-col items-center justify-center leading-tight transition ${
                   selected
                     ? "bg-[#c5a36f] text-[#051b14] border-[#c5a36f]"
                     : score !== null
@@ -295,6 +310,7 @@ export function PlayHoleShell({
             par={par}
             liveCount={liveCount}
             committedScore={committed}
+            holeShots={holeShots}
             onIncrement={(lie) => onIncrement(activeId, lie)}
             onDecrement={() => onDecrement(activeId)}
             onPenalty={(lie) => onPenalty(activeId, lie)}
@@ -305,8 +321,8 @@ export function PlayHoleShell({
         )}
       </main>
 
-      {/* Bottom bar: Prev · selected player's totals · Next / Finish */}
-      <footer className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(4px,1dvh,8px)] pb-[clamp(6px,1.4dvh,12px)] grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      {/* Bottom bar: Prev · selected player's big round Total (committed holes) · Next / Finish */}
+      <footer className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(2px,0.6dvh,6px)] pb-[clamp(6px,1.4dvh,12px)] grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           type="button"
           onClick={goPrev}
@@ -316,13 +332,29 @@ export function PlayHoleShell({
         >
           ← Prev
         </button>
-        <div className="min-w-[76px] max-w-[110px] text-center leading-tight" data-control="totals">
-          <div className="text-[10px] tracking-wider text-[#c5a36f]/80 truncate">
-            {(activePlayer?.name.split(" ")[0] ?? "TOTAL").toUpperCase()}
+        <div className="min-w-[104px] max-w-[150px] flex flex-col items-center justify-center" data-control="totals">
+          <div className="max-w-full text-[10px] font-semibold tracking-wider text-[#c5a36f]/80 truncate leading-tight">
+            TOTAL · {(activePlayer?.name.split(" ")[0] ?? "Player").toUpperCase()}
           </div>
-          <div className="text-lg font-bold tabular-nums">
-            {total || "—"}
-            <span className={`ml-1 text-sm ${vsParColor(vsPar)}`}>{total ? formatVsPar(vsPar) : ""}</span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className="text-[clamp(40px,7dvh,56px)] font-extrabold tabular-nums leading-none text-[#c5a36f]"
+              data-control="total-value"
+            >
+              {total || "—"}
+            </span>
+            <span className="flex flex-col items-start leading-tight">
+              {total ? (
+                <span className={`text-[clamp(13px,2.2dvh,17px)] font-bold tabular-nums ${vsParColor(vsPar)}`} data-control="total-vspar">
+                  {formatVsPar(vsPar)}
+                </span>
+              ) : null}
+              {liveCount > 0 && committed === null ? (
+                <span className="text-[10px] font-semibold tabular-nums text-golf-green-900/70 dark:text-golf-cream/70 whitespace-nowrap" data-control="total-live">
+                  +{liveCount} this hole
+                </span>
+              ) : null}
+            </span>
           </div>
         </div>
         {isLastHole ? (
