@@ -345,6 +345,23 @@ export interface HandicapHistoryPoint {
   date: string;
   handicap: number;
   label: string;
+  /** Which index this point shows: WHS once active, the old OG formula before. */
+  source?: "whs" | "legacy";
+}
+
+/**
+ * History chart points: the old OG value until the WHS index is established,
+ * then the WHS index after each round (so the chart follows what the app shows).
+ */
+export function withWhsHistory(
+  points: HandicapHistoryPoint[],
+  records: Array<{ date: string; indexAfter: number | null }>
+): HandicapHistoryPoint[] {
+  return points.map((pt) => {
+    let whs: number | null = null;
+    for (const r of records) if (r.date <= pt.date && r.indexAfter !== null) whs = r.indexAfter;
+    return whs === null ? { ...pt, source: "legacy" } : { ...pt, handicap: whs, source: "whs" };
+  });
 }
 
 export interface PlayerRoundResult {
@@ -468,12 +485,15 @@ export function getPlayerStats(
     averageScore,
     bestRound,
     worstRound,
-    handicapHistory: getHandicapHistoryForPlayer(
-      player.id,
-      completedRounds,
-      courses,
-      player.handicap,
-      getPlayerStartingHandicap(player)
+    handicapHistory: withWhsHistory(
+      getHandicapHistoryForPlayer(
+        player.id,
+        completedRounds,
+        courses,
+        player.legacyOgIndex ?? player.handicap,
+        getPlayerStartingHandicap(player)
+      ),
+      computeWhsForPlayer(player.id, completedRounds, courses).records
     ),
   };
 }

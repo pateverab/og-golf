@@ -14,6 +14,7 @@ import {
   clearActiveRound,
 } from "@/lib/storage";
 import { migrateCourses } from "@/lib/tees";
+import { snapshotPreWhsBackup } from "@/lib/backup";
 
 /**
  * Owns OG Golf domain data + localStorage hydrate/persist.
@@ -34,9 +35,14 @@ export function useGolfStore() {
   useEffect(() => {
     // Seed tees + stroke indexes onto known courses (idempotent; pars and
     // rounds untouched). The persist effect below writes the result back.
-    setCourses(migrateCourses(getCourses()).courses);
-    setPlayers(getPlayers());
-    setRounds(getRounds());
+    const storedCourses = getCourses();
+    const storedPlayers = getPlayers();
+    const storedRounds = getRounds();
+    // One-time safety copy BEFORE migration/recalculation can write anything.
+    snapshotPreWhsBackup(storedCourses, storedPlayers, storedRounds);
+    setCourses(migrateCourses(storedCourses).courses);
+    setPlayers(storedPlayers);
+    setRounds(storedRounds);
 
     const stored = getActiveRound();
     if (stored?.round) {

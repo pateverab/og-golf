@@ -55,6 +55,14 @@ import { canAddStroke } from "@/lib/lies";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import { MULTIPLAYER_ENABLED } from "@/lib/features";
 import {
+  OG_INDEX_LABEL,
+  computeWhsForPlayer,
+  indexPairLabel,
+  strokesOnHole,
+  whsIndexBefore,
+} from "@/lib/whs";
+import { markPreWhsBackupDone, preWhsBackupPending, readPreWhsBackup, saveJsonFile } from "@/lib/backup";
+import {
   formatTeeLabel,
   migrateCourses,
   pickInitialTee,
@@ -132,6 +140,29 @@ export default function GolfScoreTracker() {
   }, [storageHydrated, players, rounds, meId]);
   const me = players.find((p) => p.id === meId) ?? null;
   const singlePlayer = !MULTIPLAYER_ENABLED;
+  const myWhs = React.useMemo(
+    () => (meId ? computeWhsForPlayer(meId, rounds, courses) : null),
+    [meId, rounds, courses]
+  );
+
+  // One-time "download the pre-update backup" prompt (see lib/backup.ts).
+  const [backupPromptOpen, setBackupPromptOpen] = useState(false);
+  useEffect(() => {
+    if (storageHydrated) setBackupPromptOpen(preWhsBackupPending());
+  }, [storageHydrated]);
+  const downloadPreWhsBackup = async () => {
+    const backup = readPreWhsBackup();
+    if (!backup) return;
+    const result = await saveJsonFile(`og-golf-backup-before-whs-${new Date().toISOString().slice(0, 10)}.json`, backup);
+    if (result !== "cancelled") {
+      markPreWhsBackupDone();
+      setBackupPromptOpen(false);
+    }
+  };
+  const dismissPreWhsBackup = () => {
+    markPreWhsBackupDone();
+    setBackupPromptOpen(false);
+  };
 
   // Keep every player's index in step with rounds/courses: covers finishing,
   // editing and deleting rounds, course edits and backup imports. A no-op
@@ -323,7 +354,8 @@ export default function GolfScoreTracker() {
     const snap = snapshotTee(course, teeIdForStart, teeGenderForStart);
     if (!snap) return undefined;
     writeLastTee(course.id, snap.teeId, snap.gender);
-    return snap;
+    // The index shown at round start drives strokes received on the hole screen.
+    return me ? { ...snap, indexAtStart: me.handicap } : snap;
   };
   const startCourseNeedsTee = (() => {
     const c = courses.find((cc) => cc.id === selectedCourseForStart);
@@ -839,6 +871,14 @@ export default function GolfScoreTracker() {
         onRestart={restartActiveRound}
         onDelete={deleteActiveRound}
         focusPlayerId={focusPlayerIdForRound(activeRound, meId)}
+        strokesThisHole={(() => {
+          if (!activeRound.tee) return null; // legacy / no-tee round: nothing shown
+          const focus = focusPlayerIdForRound(activeRound, meId);
+          const index =
+            activeRound.tee.indexAtStart ??
+            (focus ? whsIndexBefore(focus, rounds, courses, activeRound.startTime) : null);
+          return strokesOnHole(currentCourseForActiveRound, activeRound, index, currentHole);
+        })()}
       />
     );
   }
@@ -962,6 +1002,32 @@ export default function GolfScoreTracker() {
         {/* ========== HOME VIEW ========== */}
         {activeTab === "home" && (
           <>
+            {backupPromptOpen && (
+              <div className="golf-card rounded-3xl p-5 mb-6 border-2 border-og-accent-line" data-control="whs-backup-prompt">
+                <div className="font-semibold">Your index is now WHS-style</div>
+                <p className="text-sm text-og-muted mt-1">
+                  We saved a copy of your data from before the update. Download it once to keep it safe.
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={downloadPreWhsBackup}
+                    data-control="whs-backup-download"
+                    className="flex-1 golf-btn py-3 rounded-2xl font-semibold"
+                  >
+                    Download backup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissPreWhsBackup}
+                    data-control="whs-backup-dismiss"
+                    className="px-5 rounded-2xl border border-og-border font-semibold"
+                  >
+                    Not now
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Hero / Big CTA */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-og-surface text-og-accent-text text-xs tracking-[2px] px-4 py-1 rounded-full mb-3">
@@ -1041,8 +1107,10 @@ export default function GolfScoreTracker() {
                     <div className="font-semibold text-[17px]" data-control="me-name">{me.name}</div>
                     {me.nickname && <div className="text-sm text-og-accent-text mt-0.5">“{me.nickname}”</div>}
                     <div className="mt-3 text-sm">
-                      OG Index: <span className="font-semibold text-og-accent-text text-base" data-control="me-index">{me.handicap}</span>
-                      <span className="block text-[10px] text-og-muted mt-0.5">Simplified · not USGA</span>
+                      {OG_INDEX_LABEL}: <span className="font-semibold text-og-accent-text text-base" data-control="me-index">{me.handicap}</span>
+                      <span className="block text-xs text-og-muted mt-0.5 tabular-nums" data-control="me-index-pair">
+                        {indexPairLabel(me, myWhs?.records.length ?? 0)}
+                      </span>
                     </div>
                     <button
                       onClick={() => openEditPlayerModal(me.id)}
@@ -1233,6 +1301,24 @@ export default function GolfScoreTracker() {
                       <div className="text-sm text-og-muted mt-1">
                         {getRoundFormatLabel(viewingCourse, viewingRound)}
                       </div>
+                      {singlePlayer && meId && viewingRound.playerScores.some((ps) => ps.playerId === meId) && (() => {
+                        const rec = myWhs?.records.find((r) => r.roundIds.includes(viewingRound.id));
+                        let text: string;
+                        if (!viewingRound.tee) text = "Legacy round, not counted for the WHS-style index.";
+                        else if (!viewingRound.completed) text = "Not counted until the round is finished.";
+                        else if (rec) {
+                          const ch = rec.courseHandicap === null ? "— (no index yet: par + 5 cap)" : String(rec.courseHandicap);
+                          const how = rec.method === "9+expected" ? " · 9 holes + expected score" : rec.method === "9+9" ? " · two nines combined" : "";
+                          text = `Course handicap ${ch} · Adjusted gross (NDB) ${rec.adjustedGross} · Differential ${rec.differential.toFixed(1)}${how}`;
+                        } else if (myWhs?.pendingRoundIds.includes(viewingRound.id))
+                          text = "9 holes: waiting for another nine to combine (no index yet).";
+                        else text = "Not counted (not every hole in play was scored).";
+                        return (
+                          <div className="text-sm text-og-text mt-1 tabular-nums" data-control="round-whs">
+                            {text}
+                          </div>
+                        );
+                      })()}
                       {viewingRound.tee && (
                         <div className="text-sm text-og-muted flex items-center gap-1.5" data-control="round-tee">
                           <span
