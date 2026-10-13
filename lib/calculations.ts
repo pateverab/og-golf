@@ -12,6 +12,7 @@ import {
 } from "./types";
 import type { Tee } from "./types";
 import { ARRAYANES_SEED, QUITO_SEED } from "./tees";
+import { computeWhsForPlayer } from "./whs";
 // Re-export types and everything else needed by other files
 export type {
   Course,
@@ -121,25 +122,62 @@ export function playerUsesStartingHandicap(
 ): boolean {
   // Sentinel: if still on starting, calculateHandicapForPlayer returns the starting arg unchanged.
   const sentinel = Number.MAX_SAFE_INTEGER;
+  if (computeWhsForPlayer(playerId, completedRounds, courses).index !== null) return false;
   return calculateHandicapForPlayer(playerId, completedRounds, courses, sentinel) === sentinel;
 }
 
-// Update each player's OG index from their own qualifying rounds; preserve starting if none yet.
+/**
+ * The old OG formula (average vs-par, 9s doubled; starting value until one
+ * qualifying round). Unchanged; kept for PR 3's side-by-side view.
+ */
+export const legacyOgIndex = calculateHandicapForPlayer;
+
+/**
+ * Every index for one player. `handicap` (what the app shows) is the WHS Index
+ * once the player has 3+ WHS differentials from tee'd rounds, otherwise the
+ * legacy OG value. Both are stored so neither is lost.
+ */
+export function computePlayerIndexes(
+  player: Player,
+  rounds: Round[],
+  courses: Course[]
+): Pick<Player, "handicap" | "legacyOgIndex" | "whsIndex" | "indexSource"> {
+  const legacy = legacyOgIndex(player.id, rounds, courses, getPlayerStartingHandicap(player));
+  const whs = computeWhsForPlayer(player.id, rounds, courses).index;
+  return whs === null
+    ? { handicap: legacy, legacyOgIndex: legacy, whsIndex: undefined, indexSource: "legacy" }
+    : { handicap: whs, legacyOgIndex: legacy, whsIndex: whs, indexSource: "whs" };
+}
+
+/** Apply computePlayerIndexes to a player; returns the same object when nothing changed. */
+export function withRecalculatedIndexes(player: Player, rounds: Round[], courses: Course[]): Player {
+  const next = computePlayerIndexes(player, rounds, courses);
+  const same =
+    player.handicap === next.handicap &&
+    player.legacyOgIndex === next.legacyOgIndex &&
+    player.whsIndex === next.whsIndex &&
+    player.indexSource === next.indexSource;
+  if (same) return player;
+  const updated: Player = { ...player, ...next, updatedAt: new Date().toISOString() };
+  // The first time, remember the value shown before WHS so it is never lost.
+  if (player.startingHandicap === undefined) updated.startingHandicap = player.handicap;
+  if (next.whsIndex === undefined) delete updated.whsIndex;
+  return updated;
+}
+
+/** Recalculate every player (finish, edit, delete, import). Same array back when nothing changed. */
 export function recalculateAllHandicaps(
   players: Player[],
   completedRounds: Round[],
   courses: Course[]
 ): Player[] {
-  return players.map((player) => ({
-    ...player,
-    handicap: calculateHandicapForPlayer(
-      player.id,
-      completedRounds,
-      courses,
-      getPlayerStartingHandicap(player)
-    ),
-    updatedAt: new Date().toISOString(),
-  }));
+  let changed = false;
+  const out = players.map((p) => {
+    const n = withRecalculatedIndexes(p, completedRounds, courses);
+    if (n !== p) changed = true;
+    return n;
+  });
+  return changed ? out : players;
 }
 
 // Score helpers for a single round / player
