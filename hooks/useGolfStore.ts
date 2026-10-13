@@ -13,6 +13,7 @@ import {
   saveActiveRound,
   clearActiveRound,
 } from "@/lib/storage";
+import { migrateCourses } from "@/lib/tees";
 
 /**
  * Owns OG Golf domain data + localStorage hydrate/persist.
@@ -31,7 +32,9 @@ export function useGolfStore() {
   const [roundPaused, setRoundPaused] = useState(false);
 
   useEffect(() => {
-    setCourses(getCourses());
+    // Seed tees + stroke indexes onto known courses (idempotent; pars and
+    // rounds untouched). The persist effect below writes the result back.
+    setCourses(migrateCourses(getCourses()).courses);
     setPlayers(getPlayers());
     setRounds(getRounds());
 
