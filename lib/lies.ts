@@ -19,18 +19,16 @@ export function canAddStroke(selectedLie: Lie | null | undefined): selectedLie i
 
 /**
  * Lie pre-selected when the clicker opens for a player on a hole:
- * stroke 1 is always from the Tee; after a Green shot the player is still
- * putting, so Green stays; otherwise the next swing needs a fresh chip.
+ * stroke 1 is always from the Tee; every later shot (Green included) needs
+ * a fresh chip.
  */
-export function initialLieFor(liveCount: number, lastShot?: ShotLog | null): Lie | null {
-  if (liveCount <= 0) return "tee";
-  if (lastShot && !lastShot.penalty && lastShot.lie === "green") return "green";
-  return null;
+export function initialLieFor(liveCount: number, _lastShot?: ShotLog | null): Lie | null {
+  return liveCount <= 0 ? "tee" : null;
 }
 
-/** Selection after a successful +1 Stroke: cleared, except Green stays for putting. */
-export function lieAfterStroke(lie: Lie): Lie | null {
-  return lie === "green" ? "green" : null;
+/** Selection after a successful +1 Stroke: always cleared (Green included). */
+export function lieAfterStroke(_lie: Lie): Lie | null {
+  return null;
 }
 
 /** Selection after +1 Penalty: always cleared (the next swing needs a new chip). */
