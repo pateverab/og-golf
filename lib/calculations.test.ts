@@ -4,6 +4,8 @@ import {
   MIN_COMPLETED_ROUNDS_FOR_OG_INDEX,
   calculateHandicapForPlayer,
   getDefaultRoundConfig,
+  getHandicapHistoryForPlayer,
+  getPlayerStats,
   getHolesInPlay,
   is18HoleCourse,
   normalizeRoundConfig,
@@ -148,5 +150,34 @@ describe("OG index / handicap trust", () => {
     const updated = recalculateAllHandicaps([p1, p2], [round], [c]);
     expect(updated.find((p) => p.id === "p2")?.handicap).toBe(14);
     expect(updated.find((p) => p.id === "p1")?.handicap).not.toBe(8);
+  });
+});
+
+describe("OG index history chart", () => {
+  it("plots the starting index (not the current one) before the first qualifying round", () => {
+    const c = course18();
+    // Early round: completed but only 9 of 18 holes scored → does not qualify.
+    const partial = completedRound("r0", c, "p1", 5);
+    partial.date = "2026-01-01T00:00:00.000Z";
+    partial.playerScores[0].scores = partial.playerScores[0].scores.slice(0, 9);
+    const full = completedRound("r1", c, "p1", 5); // diff 24
+    const rounds = [partial, full];
+
+    const before: Player = { id: "p1", name: "Pato", handicap: 12, startingHandicap: 12, updatedAt: "" };
+    const [player] = recalculateAllHandicaps([before], rounds, [c]);
+    expect(player.handicap).toBe(24); // current index unchanged by the chart fix
+
+    const history = getHandicapHistoryForPlayer("p1", rounds, [c], player.handicap, 12);
+    expect(history.map((h) => h.handicap)).toEqual([12, 24]);
+    expect(getPlayerStats(player, rounds, [c]).handicapHistory.map((h) => h.handicap)).toEqual([12, 24]);
+    // Last point always equals the current index.
+    expect(history[history.length - 1].handicap).toBe(player.handicap);
+  });
+
+  it("keeps the old fallback for callers that pass no starting index", () => {
+    const c = course18();
+    const partial = completedRound("r0", c, "p1", 5);
+    partial.playerScores[0].scores = partial.playerScores[0].scores.slice(0, 9);
+    expect(getHandicapHistoryForPlayer("p1", [partial], [c], 7).map((h) => h.handicap)).toEqual([7]);
   });
 });
