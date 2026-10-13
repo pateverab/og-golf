@@ -37,20 +37,21 @@ describe("lie gating for +1 Stroke", () => {
     expect(canAddStroke(initialLieFor(0))).toBe(true);
   });
 
-  it("needs a new chip mid-hole unless the last shot was from the Green", () => {
+  it("needs a new chip mid-hole, even after a Green shot", () => {
     expect(initialLieFor(2, { holeNumber: 1, stroke: 2, lie: "fairway" })).toBeNull();
-    expect(initialLieFor(3, { holeNumber: 1, stroke: 3, lie: "green" })).toBe("green");
+    expect(initialLieFor(3, { holeNumber: 1, stroke: 3, lie: "green" })).toBeNull();
     expect(initialLieFor(3, { holeNumber: 1, stroke: 3, lie: "green", penalty: true })).toBeNull();
     expect(initialLieFor(1, null)).toBeNull();
   });
 
-  it("clears after every +1 except Green (putting)", () => {
+  it("clears after every +1, Green included", () => {
     expect(lieAfterStroke("tee")).toBeNull();
     expect(lieAfterStroke("fairway")).toBeNull();
     expect(lieAfterStroke("rough")).toBeNull();
     expect(lieAfterStroke("bunker")).toBeNull();
     expect(lieAfterStroke("other")).toBeNull();
-    expect(lieAfterStroke("green")).toBe("green");
+    expect(lieAfterStroke("green")).toBeNull();
+    expect(canAddStroke(lieAfterStroke("green"))).toBe(false);
   });
 
   it("clears after a penalty", () => {

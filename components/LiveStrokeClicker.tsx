@@ -40,7 +40,7 @@ function formatVsPar(vsPar: number): string {
  * screen with no scrolling (every height is dvh-clamped).
  *
  * +1 Stroke needs a lie: stroke 1 defaults to Tee, every other +1 needs a
- * fresh chip (Green stays selected while putting). +1 Penalty, Undo, and
+ * fresh chip, Green included. +1 Penalty, Undo, and
  * Hole Out never need a lie. Lies are written to shotLog only, never onto
  * HoleScore.
  */
