@@ -335,7 +335,12 @@ export function getHandicapHistoryForPlayer(
   playerId: string,
   completedRounds: Round[],
   courses: Course[],
-  currentHandicap?: number
+  currentHandicap?: number,
+  /**
+   * Value plotted before the player has a qualifying round (their starting OG
+   * index). Falls back to currentHandicap for older callers.
+   */
+  startingHandicap?: number
 ): HandicapHistoryPoint[] {
   const playerRounds = getPlayerCompletedRounds(playerId, completedRounds);
 
@@ -356,7 +361,7 @@ export function getHandicapHistoryForPlayer(
       playerId,
       roundsUpToNow,
       courses,
-      currentHandicap ?? 0
+      startingHandicap ?? currentHandicap ?? 0
     );
     return {
       date: round.date,
@@ -420,7 +425,8 @@ export function getPlayerStats(
       player.id,
       completedRounds,
       courses,
-      player.handicap
+      player.handicap,
+      getPlayerStartingHandicap(player)
     ),
   };
 }
