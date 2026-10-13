@@ -76,7 +76,7 @@ export function PlayerDetailModal({
             </div>
           </div>
           <div className="bg-og-surface p-4 rounded-xl text-center">
-            <div className="text-sm text-og-muted">OG Index</div>
+            <div className="text-sm text-og-muted">OG Index (WHS-style, unofficial)</div>
             <div className="text-3xl font-bold text-og-text">{player.handicap}</div>
             <div className="text-[10px] text-og-muted mt-1">Not USGA</div>
           </div>

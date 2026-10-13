@@ -39,6 +39,8 @@ export interface RoundTee {
   rating: number;
   slope: number;
   par: number;
+  /** OG Index shown when the round started (drives strokes received on the hole screen). */
+  indexAtStart?: number;
 }
 
 export interface Course {

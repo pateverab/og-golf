@@ -55,6 +55,8 @@ export interface PlayHoleShellProps {
   onDelete: () => void;
   /** Single-player mode: whose clicker/strip/Total this screen shows (Me). */
   focusPlayerId?: string | null;
+  /** Strokes received on the current hole (tee'd rounds only); null/0 shows nothing. */
+  strokesThisHole?: number | null;
 }
 
 function formatVsPar(vsPar: number): string {
@@ -101,6 +103,7 @@ export function PlayHoleShell({
   onRestart,
   onDelete,
   focusPlayerId,
+  strokesThisHole,
 }: PlayHoleShellProps) {
   usePlaySurfaceLock(true);
 
@@ -197,6 +200,16 @@ export function PlayHoleShell({
             <span className="shrink-0 text-sm font-semibold px-2 py-px rounded-full bg-og-par-pill text-og-on-par-pill">
               Par {par}
             </span>
+            {strokesThisHole ? (
+              <span
+                className="shrink-0 text-[11px] font-bold tabular-nums leading-none px-1.5 py-1 rounded-full border border-og-accent-line text-og-accent-text"
+                data-control="hole-strokes"
+                aria-label={`${Math.abs(strokesThisHole)} stroke${Math.abs(strokesThisHole) === 1 ? "" : "s"} ${strokesThisHole > 0 ? "received" : "given back"} on this hole`}
+                title="Strokes received (OG Index, WHS-style)"
+              >
+                {strokesThisHole > 0 ? `+${strokesThisHole}` : `−${Math.abs(strokesThisHole)}`}
+              </span>
+            ) : null}
             {holeIndex >= 0 && (
               <span className="min-w-0 truncate text-[11px] text-og-muted tabular-nums">
                 {holeIndex + 1}/{holesInPlay.length}

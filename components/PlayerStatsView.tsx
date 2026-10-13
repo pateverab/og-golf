@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import type { Player, Round, Course } from "@/lib/types";
 import { getPlayerStats } from "@/lib/calculations";
+import { OG_INDEX_LABEL, computeWhsForPlayer, countingRecords, indexPairLabel } from "@/lib/whs";
 import { resolveTheme } from "@/lib/theme";
 import { optionPillClass } from "@/lib/selectable";
 
@@ -79,6 +80,11 @@ export function PlayerStatsView({
   const stats = selectedPlayer
     ? getPlayerStats(selectedPlayer, completedRounds, courses)
     : null;
+  const whs = selectedPlayer ? computeWhsForPlayer(selectedPlayer.id, rounds, courses) : null;
+  const counting = whs ? countingRecords(whs.records) : null;
+  const latestCap = whs?.records[whs.records.length - 1]?.capApplied ?? null;
+  const courseNameForRound = (roundId: string) =>
+    courses.find((c) => c.id === rounds.find((r) => r.id === roundId)?.courseId)?.name ?? "—";
 
   // Recharts takes plain color strings: read the active scheme's tokens (re-read when the theme flips).
   const chartColors = {
@@ -96,7 +102,7 @@ export function PlayerStatsView({
         <div className="mb-6 px-1">
           <h2 className="text-2xl font-semibold">{title}</h2>
           <p className="text-sm text-og-muted mt-1">
-            Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
+            Track your OG Index (WHS-style, unofficial) and round performance over time. Not an official USGA/R&amp;A Handicap Index.
           </p>
         </div>
         <div className="golf-card rounded-3xl p-10 text-center">
@@ -124,7 +130,7 @@ export function PlayerStatsView({
         <div>
           <h2 className="text-2xl font-semibold">{title}</h2>
           <p className="text-sm text-og-muted mt-1">
-            Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
+            Track your OG Index (WHS-style, unofficial) and round performance over time. Not an official USGA/R&amp;A Handicap Index.
           </p>
         </div>
         {onLoadTestData && !testDataLoaded && (
@@ -195,14 +201,70 @@ export function PlayerStatsView({
             </div>
           </div>
 
+          {/* WHS-style score record: last 20 differentials, which count, low index, caps */}
+          <div className="golf-card rounded-3xl p-6 mb-6" data-control="whs-record">
+            <h3 className="text-lg font-semibold">Score differentials</h3>
+            {whs && counting && whs.records.length > 0 ? (
+              <>
+                <p className="text-xs text-og-muted mt-0.5 mb-3">
+                  Last {counting.recent.length} of 20 ·{" "}
+                  {counting.use > 0
+                    ? `best ${counting.use} count${counting.adjustment ? ` (${counting.adjustment.toFixed(1)} adjustment)` : ""}`
+                    : `${3 - counting.recent.length} more to get an index`}
+                  {" · "}
+                  <span data-control="whs-low">
+                    {whs.lowIndex !== null ? `Low index ${whs.lowIndex.toFixed(1)} (365 days)` : "Low index starts at 20 scores"}
+                  </span>
+                  {latestCap && (
+                    <span data-control="whs-cap" className="text-og-danger"> · {latestCap === "soft" ? "Soft" : "Hard"} cap applied</span>
+                  )}
+                </p>
+                <ul className="divide-y divide-og-divider text-sm">
+                  {[...counting.recent].reverse().map((rec) => {
+                    const counts = counting.counting.has(rec);
+                    return (
+                      <li
+                        key={rec.roundIds.join("+")}
+                        className="py-2 flex items-center justify-between gap-3"
+                        data-control="whs-diff-row"
+                        data-counts={counts ? "1" : "0"}
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate">{courseNameForRound(rec.roundIds[rec.roundIds.length - 1])}</div>
+                          <div className="text-[11px] text-og-muted">
+                            {new Date(rec.date).toLocaleDateString()} · {rec.method === "18" ? "18 holes" : rec.method === "9+9" ? "two 9s" : "9 holes + expected"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`tabular-nums font-semibold ${counts ? "text-og-accent-text" : "text-og-muted"}`}>
+                            {rec.differential.toFixed(1)}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${counts ? "bg-og-accent text-og-on-accent" : "text-og-muted"}`}
+                          >
+                            {counts ? "COUNTS" : "—"}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <p className="text-sm text-og-muted mt-1">
+                No WHS-style scores yet. Pick a tee when you start a round; rounds without a tee (legacy) aren&apos;t counted.
+              </p>
+            )}
+          </div>
+
           {/* Handicap history chart */}
           <div className="golf-card rounded-3xl p-6">
             <div className="flex items-baseline justify-between mb-4 px-1">
               <div>
-                <h3 className="text-lg font-semibold">OG Index History</h3>
+                <h3 className="text-lg font-semibold">{OG_INDEX_LABEL} history</h3>
                 <p className="text-xs text-og-muted mt-0.5">
-                  Current OG index: <span className="font-semibold text-og-accent-text">{selectedPlayer.handicap}</span>
-                  <span className="text-og-muted"> · not USGA</span>
+                  Current: <span className="font-semibold text-og-accent-text" data-control="stats-index">{selectedPlayer.handicap}</span>
+                  <span className="text-og-muted tabular-nums" data-control="stats-index-pair"> · {indexPairLabel(selectedPlayer, whs?.records.length ?? 0)}</span>
                 </p>
               </div>
             </div>
@@ -237,7 +299,10 @@ export function PlayerStatsView({
                         fontSize: "13px",
                         color: chartColors.tooltipText,
                       }}
-                      formatter={(value) => [value ?? "—", "OG Index"]}
+                      formatter={(value, _name, item) => [
+                        value ?? "—",
+                        (item as { payload?: { source?: string } } | undefined)?.payload?.source === "whs" ? "OG Index (WHS)" : "OG Index (old)",
+                      ]}
                       labelFormatter={(_, payload) => {
                         const point = payload?.[0]?.payload;
                         if (!point?.date) return "";
