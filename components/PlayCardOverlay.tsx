@@ -8,11 +8,14 @@ import {
   getPlayerScoreOnHole,
 } from "@/lib/activeRound";
 import { MarkedScore } from "@/components/MarkedScore";
+import { MULTIPLAYER_ENABLED } from "@/lib/features";
 
 interface PlayCardOverlayProps {
   activeRound: ActiveRound;
   course: Course;
   players: Player[];
+  /** Columns to show (single-player mode: just Me). Defaults to every player in the round. */
+  visiblePlayerIds?: string[];
   holesInPlay: number[];
   currentHole: number;
   onClose: () => void;
@@ -33,12 +36,13 @@ export function PlayCardOverlay({
   activeRound,
   course,
   players,
+  visiblePlayerIds,
   holesInPlay,
   currentHole,
   onClose,
   onJumpToHole,
 }: PlayCardOverlayProps) {
-  const roster = activeRound.playerIds
+  const roster = (visiblePlayerIds ?? activeRound.playerIds)
     .map((id) => players.find((p) => p.id === id))
     .filter((p): p is Player => Boolean(p));
   const parFor = (hole: number) => course.holes.find((h) => h.number === hole)?.par ?? 4;
@@ -68,13 +72,15 @@ export function PlayCardOverlay({
       </div>
 
       <div data-og-scroll="1" className="og-card-scroll px-4 pt-4 pb-6">
-        <LiveLeaderboard
-          playerIds={activeRound.playerIds}
-          players={players}
-          course={course}
-          scores={activeRound.scores}
-          roundConfig={activeRound}
-        />
+        {MULTIPLAYER_ENABLED && (
+          <LiveLeaderboard
+            playerIds={activeRound.playerIds}
+            players={players}
+            course={course}
+            scores={activeRound.scores}
+            roundConfig={activeRound}
+          />
+        )}
 
         <div className="uppercase tracking-[1.5px] text-xs font-semibold text-og-accent-text mb-2 px-1">
           Hole by hole · tap a hole to jump

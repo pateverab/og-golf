@@ -14,6 +14,7 @@ import {
 import { LiveStrokeClicker } from "@/components/LiveStrokeClicker";
 import { HoleSummaryStrip } from "@/components/HoleSummaryStrip";
 import { PlayCardOverlay } from "@/components/PlayCardOverlay";
+import { MULTIPLAYER_ENABLED } from "@/lib/features";
 import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
 import { OPTION_PRESSED_CLASS } from "@/lib/selectable";
@@ -52,6 +53,8 @@ export interface PlayHoleShellProps {
   onRestart: () => void;
   /** Quit → Quit and delete (already confirmed in the modal). */
   onDelete: () => void;
+  /** Single-player mode: whose clicker/strip/Total this screen shows (Me). */
+  focusPlayerId?: string | null;
 }
 
 function formatVsPar(vsPar: number): string {
@@ -97,11 +100,18 @@ export function PlayHoleShell({
   onPause,
   onRestart,
   onDelete,
+  focusPlayerId,
 }: PlayHoleShellProps) {
   usePlaySurfaceLock(true);
 
-  const playerIds = activeRound.playerIds;
-  const isMulti = playerIds.length > 1;
+  // Single-player mode: the screen only ever shows Me (or, for an old
+  // multiplayer round Me wasn't in, its first player). Others' data is kept.
+  const focusId =
+    focusPlayerId && activeRound.playerIds.includes(focusPlayerId)
+      ? focusPlayerId
+      : activeRound.playerIds[0];
+  const playerIds = MULTIPLAYER_ENABLED || !focusId ? activeRound.playerIds : [focusId];
+  const isMulti = MULTIPLAYER_ENABLED && playerIds.length > 1;
   const par = course.holes.find((h) => h.number === currentHole)?.par ?? 4;
   const holeIndex = holesInPlay.indexOf(currentHole);
   const isLastHole = holeIndex >= 0 && holeIndex === holesInPlay.length - 1;
@@ -445,6 +455,7 @@ export function PlayHoleShell({
           activeRound={activeRound}
           course={course}
           players={players}
+          visiblePlayerIds={playerIds}
           holesInPlay={holesInPlay}
           currentHole={currentHole}
           onClose={() => setCardOpen(false)}

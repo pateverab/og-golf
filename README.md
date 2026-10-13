@@ -61,6 +61,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Large touch-friendly controls optimized for quick score entry
 - Clean, modern typography and spacing
 
+## Single-player mode ("Me")
+
+OG Golf is a personal app: every new round is just you.
+
+- **Me profile.** Set it up once on Home (name and starting OG index); edit it any time from the Me card. If you already have players, Me is picked automatically: a player whose first name or nickname is "Patricio" (the one with the most rounds if there are several), otherwise the player with the most rounds, otherwise the first player. The choice is remembered on this device (`og-golf-me-player-id`).
+- **Start New Round** goes course → 9/18 → nine / starting hole → play. There's no player picker, and Hole Out moves to the next hole.
+- **Old multiplayer rounds** stay in history as read-only, showing your score first. Everyone else's scores are kept in the data, in exports and in backups. A saved multiplayer round in progress resumes with only your clicker, and Finish needs only your holes.
+- The multiplayer UI is still in the code behind `MULTIPLAYER_ENABLED` in `lib/features.ts` (off).
+
 ## Data
 
 Everything lives in browser localStorage. Clearing your browser data will remove all courses, players, and rounds. Use **Backup & Restore** to export or import a JSON backup.

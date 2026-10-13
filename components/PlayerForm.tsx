@@ -6,7 +6,10 @@ import { getPlayerStartingHandicap } from "@/lib/calculations";
 
 interface PlayerFormProps {
   onSave: (name: string, nickname: string, startingHandicap: number) => void;
-  onCancel: () => void;
+  /** Omit to hide Cancel (first-run Me setup has nothing to cancel to). */
+  onCancel?: () => void;
+  /** Overrides the submit label for a new player. */
+  submitLabel?: string;
   /** When set, form is in edit mode and prefilled. */
   initialPlayer?: Player | null;
   /** True when OG index is already calculated from rounds (starting HCP is fallback only). */
@@ -16,6 +19,7 @@ interface PlayerFormProps {
 export function PlayerForm({
   onSave,
   onCancel,
+  submitLabel,
   initialPlayer,
   hasCalculatedIndex = false,
 }: PlayerFormProps) {
@@ -104,19 +108,21 @@ export function PlayerForm({
       </div>
 
       <div className="flex gap-3 pt-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 py-3.5 rounded-xl border border-og-border font-semibold"
-        >
-          Cancel
-        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-3.5 rounded-xl border border-og-border font-semibold"
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="submit"
           disabled={!name.trim()}
           className="golf-btn flex-1 py-3.5 rounded-xl disabled:opacity-50"
         >
-          {isEdit ? "Save Changes" : "Add Player"}
+          {isEdit ? "Save Changes" : submitLabel ?? "Add Player"}
         </button>
       </div>
     </form>

@@ -30,6 +30,7 @@ interface PlayerStatsViewProps {
   courses: Course[];
   onLoadTestData?: () => void;
   testDataLoaded?: boolean;
+  title?: string;
 }
 
 function formatVsPar(vsPar: number): string {
@@ -43,6 +44,7 @@ export function PlayerStatsView({
   courses,
   onLoadTestData,
   testDataLoaded = false,
+  title = "Player Statistics",
 }: PlayerStatsViewProps) {
   const sortedPlayers = useMemo(
     () => [...players].sort((a, b) => a.name.localeCompare(b.name)),
@@ -92,7 +94,7 @@ export function PlayerStatsView({
     return (
       <div>
         <div className="mb-6 px-1">
-          <h2 className="text-2xl font-semibold">Player Statistics</h2>
+          <h2 className="text-2xl font-semibold">{title}</h2>
           <p className="text-sm text-og-muted mt-1">
             Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
@@ -120,7 +122,7 @@ export function PlayerStatsView({
     <div>
       <div className="mb-6 px-1 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">Player Statistics</h2>
+          <h2 className="text-2xl font-semibold">{title}</h2>
           <p className="text-sm text-og-muted mt-1">
             Track OG index trends and round performance over time. OG index is a simplified score — not USGA.
           </p>
@@ -136,7 +138,8 @@ export function PlayerStatsView({
         )}
       </div>
 
-      {/* Player selector */}
+      {/* Player selector (hidden in single-player mode: only Me) */}
+      {sortedPlayers.length > 1 && (
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6 -mx-1 px-1">
         {sortedPlayers.map((player) => (
           <button
@@ -152,6 +155,7 @@ export function PlayerStatsView({
           </button>
         ))}
       </div>
+      )}
 
       {selectedPlayer && stats && (
         <>

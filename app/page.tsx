@@ -52,6 +52,17 @@ import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { canAddStroke } from "@/lib/lies";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
+import { MULTIPLAYER_ENABLED } from "@/lib/features";
+import {
+  createSinglePlayerRound,
+  focusPlayerIdForRound,
+  isRoundFullyScoredFor,
+  readStoredMeId,
+  requiredPlayerIds,
+  resolveMePlayerId,
+  roundFocusedOnPlayer,
+  writeStoredMeId,
+} from "@/lib/me";
 import {
   getTestDataSuccessMessage,
   hasTestDataLoaded,
@@ -96,6 +107,20 @@ export default function GolfScoreTracker() {
   const [roundLengthForStart, setRoundLengthForStart] = useState<RoundLength>(18);
   const [nineSideForStart, setNineSideForStart] = useState<NineSide>("front");
   const [startingHoleForStart, setStartingHoleForStart] = useState<1 | 10>(1);
+  // ==================== ME (single-player mode) ====================
+  // One "Me" profile plays every new round. Resolved once after storage
+  // hydrates (stored id → player named Patricio → most rounds → first player)
+  // and re-resolved if Me disappears (e.g. a backup import replaced players).
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!storageHydrated) return;
+    const resolved = resolveMePlayerId(players, rounds, meId ?? readStoredMeId());
+    if (resolved !== meId) setMeId(resolved);
+    writeStoredMeId(resolved);
+  }, [storageHydrated, players, rounds, meId]);
+  const me = players.find((p) => p.id === meId) ?? null;
+  const singlePlayer = !MULTIPLAYER_ENABLED;
+
   // Past round detail
   const [viewingRoundId, setViewingRoundId] = useState<string | null>(null);
 
@@ -266,6 +291,22 @@ export default function GolfScoreTracker() {
   };
 
   const startRound = () => {
+    if (singlePlayer) {
+      const course = courses.find((c) => c.id === selectedCourseForStart);
+      if (!course || !meId) return;
+      const { round, firstHole } = createSinglePlayerRound(
+        course,
+        meId,
+        { roundLength: roundLengthForStart, nineSide: nineSideForStart, startingHole: startingHoleForStart },
+        { id: generateId() }
+      );
+      setActiveRound(round);
+      setRoundPaused(false);
+      setCurrentHole(firstHole);
+      setIsStartRoundModalOpen(false);
+      setActiveTab("rounds");
+      return;
+    }
     if (!selectedCourseForStart || selectedPlayersForStart.length === 0) return;
 
     const course = courses.find((c) => c.id === selectedCourseForStart)!;
@@ -354,7 +395,8 @@ export default function GolfScoreTracker() {
     );
   };
 
-  /** Commit live taps → HoleScore; advance when every player has this hole scored. */
+  /** Commit live taps → HoleScore; advance when every required player (just Me
+   *  in single-player mode) has this hole scored. */
   const holeOutLiveStroke = (playerId: string, holeNumber: number) => {
     setActiveRound((prev) => {
       if (!prev) return prev;
@@ -362,7 +404,7 @@ export default function GolfScoreTracker() {
       const course = courses.find((c) => c.id === next.courseId);
       if (course) {
         const holes = getHolesInPlay(course, next);
-        const allScored = next.playerIds.every((pid) =>
+        const allScored = requiredPlayerIds(next, meId, MULTIPLAYER_ENABLED).every((pid) =>
           (next.scores[pid] || []).some((s) => s.holeNumber === holeNumber)
         );
         if (allScored) {
@@ -385,6 +427,9 @@ export default function GolfScoreTracker() {
     if (!activeRound) return false;
     const course = getCurrentCourse();
     if (!course) return false;
+    if (singlePlayer) {
+      return isRoundFullyScoredFor(activeRound, course, requiredPlayerIds(activeRound, meId, false));
+    }
     return readIsActiveRoundFullyScored(activeRound, course);
   };
 
@@ -401,7 +446,7 @@ export default function GolfScoreTracker() {
     if (markComplete && !isActiveRoundFullyScored()) {
       const holesInPlay = getHolesInPlay(course, activeRound);
       const missing: string[] = [];
-      for (const pid of activeRound.playerIds) {
+      for (const pid of requiredPlayerIds(activeRound, meId, MULTIPLAYER_ENABLED)) {
         const player = players.find((p) => p.id === pid);
         const name = player?.name ?? "Player";
         const scored = new Set((activeRound.scores[pid] || []).map((s) => s.holeNumber));
@@ -411,7 +456,9 @@ export default function GolfScoreTracker() {
         }
       }
       alert(
-        "Finish Round requires a score for every hole in play for every player.\n\n" +
+        (singlePlayer
+          ? "Finish Round requires your score on every hole in play.\n\n"
+          : "Finish Round requires a score for every hole in play for every player.\n\n") +
           "Missing scores:\n" +
           missing.join("\n") +
           "\n\nEnter the remaining scores, or use Save & Continue Later."
@@ -551,8 +598,9 @@ export default function GolfScoreTracker() {
     };
 
     const holesInPlay = getHolesInPlay(course, resumed);
+    const mustScore = requiredPlayerIds(resumed, meId, MULTIPLAYER_ENABLED);
     const firstUnscored =
-      holesInPlay.find((h) => !playerIds.every((pid) => (scores[pid] || []).some((s) => s.holeNumber === h))) ??
+      holesInPlay.find((h) => !mustScore.every((pid) => (scores[pid] || []).some((s) => s.holeNumber === h))) ??
       holesInPlay[holesInPlay.length - 1] ??
       roundConfig.startingHole;
 
@@ -648,6 +696,41 @@ export default function GolfScoreTracker() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 
+  /** Right-hand side of a round row: Me's score in single-player mode. */
+  const roundSummaryRight = (round: Round) => {
+    if (!singlePlayer) return <>{round.playerScores.length} players</>;
+    const c = courses.find((cc) => cc.id === round.courseId);
+    const mine = meId ? round.playerScores.find((ps) => ps.playerId === meId) : undefined;
+    const others = round.playerScores.length - (mine ? 1 : 0);
+    const othersLine =
+      others > 0 ? (
+        <span className="block text-[11px] text-og-muted" data-control="round-others">
+          {mine ? `with ${others} other${others === 1 ? "" : "s"} · read-only` : `${others} player${others === 1 ? "" : "s"} · read-only`}
+        </span>
+      ) : null;
+    if (!mine || !c) {
+      return (
+        <span data-control="round-my-score">
+          <span className="block text-og-muted">{mine ? "—" : "You didn't play"}</span>
+          {othersLine}
+        </span>
+      );
+    }
+    const total = getTotalScoreForPlayerInRound(mine, c);
+    const vs = getScoreVsParForPlayerInRound(mine, c);
+    return (
+      <span data-control="round-my-score">
+        <span className="font-semibold tabular-nums text-og-text">{total || "—"}</span>
+        {total > 0 && (
+          <span className={`ml-1.5 font-medium ${vs < 0 ? "text-og-success" : vs > 0 ? "text-og-danger" : ""}`}>
+            {vs === 0 ? "E" : vs > 0 ? `+${vs}` : vs}
+          </span>
+        )}
+        {othersLine}
+      </span>
+    );
+  };
+
   // ==================== RENDER ====================
   const currentCourseForActiveRound = getCurrentCourse();
   const activeHolesInPlay =
@@ -698,6 +781,7 @@ export default function GolfScoreTracker() {
         onPause={pauseActiveRound}
         onRestart={restartActiveRound}
         onDelete={deleteActiveRound}
+        focusPlayerId={focusPlayerIdForRound(activeRound, meId)}
       />
     );
   }
@@ -833,12 +917,19 @@ export default function GolfScoreTracker() {
             {!activeRound && (
             <button
               onClick={openStartRoundModal}
-              disabled={courses.length === 0 || players.length === 0}
+              disabled={courses.length === 0 || (singlePlayer ? !me : players.length === 0)}
+              data-control="start-round"
               className="w-full mb-8 golf-btn text-2xl py-7 rounded-3xl font-semibold shadow-xl disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.985]"
             >
-              {courses.length === 0 || players.length === 0
-                ? "Add a course and players first"
-                : "▶  Start New Round"}
+              {singlePlayer
+                ? !me
+                  ? "Set up your profile first"
+                  : courses.length === 0
+                    ? "Add a course first"
+                    : "▶  Start New Round"
+                : courses.length === 0 || players.length === 0
+                  ? "Add a course and players first"
+                  : "▶  Start New Round"}
             </button>
             )}
 
@@ -882,7 +973,48 @@ export default function GolfScoreTracker() {
               )}
             </section>
 
-            {/* MY PLAYERS */}
+            {/* ME (single-player): first-run setup, then a profile card */}
+            {singlePlayer && storageHydrated && (
+              <section className="mb-8" data-control="me-section">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h2 className="text-xl font-semibold">Me</h2>
+                </div>
+                {me ? (
+                  <div className="golf-card rounded-3xl p-6" data-control="me-card">
+                    <div className="font-semibold text-[17px]" data-control="me-name">{me.name}</div>
+                    {me.nickname && <div className="text-sm text-og-accent-text mt-0.5">“{me.nickname}”</div>}
+                    <div className="mt-3 text-sm">
+                      OG Index: <span className="font-semibold text-og-accent-text text-base" data-control="me-index">{me.handicap}</span>
+                      <span className="block text-[10px] text-og-muted mt-0.5">Simplified · not USGA</span>
+                    </div>
+                    <button
+                      onClick={() => openEditPlayerModal(me.id)}
+                      data-control="me-edit"
+                      className="mt-3 text-xs text-og-accent-text hover:underline"
+                    >
+                      Edit my profile
+                    </button>
+                  </div>
+                ) : (
+                  <div className="golf-card rounded-3xl p-6" data-control="me-setup">
+                    <div className="font-semibold text-[17px]">Set up your profile</div>
+                    <p className="text-sm text-og-muted mt-1 mb-4">
+                      Just you. Your name and a starting OG index (your current handicap is a fine start).
+                    </p>
+                    <PlayerForm
+                      key="me-setup"
+                      initialPlayer={null}
+                      hasCalculatedIndex={false}
+                      onSave={handleSavePlayer}
+                      submitLabel="Save my profile"
+                    />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* MY PLAYERS (multiplayer only) */}
+            {!singlePlayer && (
             <section className="mb-8">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-xl font-semibold">My Players</h2>
@@ -924,6 +1056,7 @@ export default function GolfScoreTracker() {
                 <div className="golf-card rounded-2xl p-8 text-center text-og-muted">Add players to start tracking rounds and OG index.</div>
               )}
             </section>
+            )}
 
             {/* PAST ROUNDS PREVIEW */}
             <section>
@@ -952,7 +1085,7 @@ export default function GolfScoreTracker() {
                           <div className="text-xs text-og-muted">{new Date(round.date).toLocaleDateString()}</div>
                         </div>
                         <div className="text-right text-sm text-og-accent-text">
-                          {round.playerScores.length} players
+                          {roundSummaryRight(round)}
                         </div>
                       </button>
                     );
@@ -1011,9 +1144,10 @@ export default function GolfScoreTracker() {
         {/* ========== STATS VIEW ========== */}
         {activeTab === "stats" && (
           <PlayerStatsView
-            players={players}
+            players={singlePlayer ? (me ? [me] : []) : players}
             rounds={rounds}
             courses={courses}
+            title={singlePlayer ? "My Statistics" : undefined}
             onLoadTestData={handleLoadTestData}
             testDataLoaded={hasTestDataLoaded(players)}
           />
@@ -1055,18 +1189,34 @@ export default function GolfScoreTracker() {
                   </div>
 
                   <div className="mt-6 space-y-5">
-                    {viewingRound.playerScores.map((ps) => {
+                    {singlePlayer && meId && !viewingRound.playerScores.some((ps) => ps.playerId === meId) && (
+                      <div className="text-sm text-og-muted" data-control="round-not-played">You didn&apos;t play this round.</div>
+                    )}
+                    {singlePlayer &&
+                      viewingRound.playerScores.some((ps) => ps.playerId !== meId) && (
+                        <div className="text-xs uppercase tracking-[1.5px] font-semibold text-og-muted -mb-2" data-control="round-readonly-note">
+                          Played with others · read-only
+                        </div>
+                      )}
+                    {[...viewingRound.playerScores]
+                      .sort((a, b) => (singlePlayer ? Number(b.playerId === meId) - Number(a.playerId === meId) : 0))
+                      .map((ps) => {
                       const pl = players.find((p) => p.id === ps.playerId);
                       const total = getTotalScoreForPlayerInRound(ps, viewingCourse);
                       const vsPar = getScoreVsParForPlayerInRound(ps, viewingCourse);
                       return (
-                        <div key={ps.playerId} className="bg-og-surface rounded-2xl p-4">
+                        <div
+                          key={ps.playerId}
+                          data-control={singlePlayer ? (ps.playerId === meId ? "round-me" : "round-other") : undefined}
+                          className={`bg-og-surface rounded-2xl p-4 ${singlePlayer && ps.playerId !== meId ? "opacity-70" : ""}`}
+                        >
                           <div className="flex justify-between items-baseline">
                             <button
                           onClick={() => setPlayerDetailModal({ playerId: ps.playerId, roundId: viewingRound.id })}
                           className="font-semibold text-left hover:text-og-accent-text active:opacity-80"
                         >
-                          {pl?.name}
+                          {pl?.name ?? "Unknown player"}
+                          {singlePlayer && ps.playerId === meId && <span className="ml-2 text-xs text-og-accent-text">You</span>}
                         </button>
                             <div className="text-right">
                               <span className="text-2xl font-semibold tabular-nums">{total}</span>
@@ -1083,7 +1233,7 @@ export default function GolfScoreTracker() {
 
                   {viewingRound.completed && (
                     <RoundExportPanel
-                      round={viewingRound}
+                      round={singlePlayer ? roundFocusedOnPlayer(viewingRound, meId) : viewingRound}
                       course={viewingCourse}
                       players={players}
                     />
@@ -1112,7 +1262,7 @@ export default function GolfScoreTracker() {
                             <div className="text-xs text-og-muted mt-0.5">{new Date(round.date).toLocaleDateString()}</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-og-accent-text">{round.playerScores.length} players</div>
+                            <div className="text-sm text-og-accent-text">{roundSummaryRight(round)}</div>
                             <div className={`text-xs mt-0.5 ${round.completed ? "text-og-success" : "text-og-live"}`}>
                               {round.completed ? "Completed" : "In progress"}
                             </div>
@@ -1252,8 +1402,8 @@ export default function GolfScoreTracker() {
             );
           })()}
 
-          {/* Choose Players */}
-          {selectedCourseForStart && (
+          {/* Choose Players (multiplayer only; single-player rounds are always just Me) */}
+          {MULTIPLAYER_ENABLED && selectedCourseForStart && (
             <div>
               <div className="text-sm font-medium text-og-accent-text mb-2">Select Players (at least one)</div>
               <div className="space-y-2">
@@ -1282,7 +1432,8 @@ export default function GolfScoreTracker() {
             </button>
             <button
               onClick={startRound}
-              disabled={!selectedCourseForStart || selectedPlayersForStart.length === 0}
+              disabled={!selectedCourseForStart || (singlePlayer ? !meId : selectedPlayersForStart.length === 0)}
+              data-control="start-round-confirm"
               className="golf-btn flex-1 py-3.5 rounded-2xl font-semibold disabled:opacity-50"
             >
               Start Round
@@ -1312,7 +1463,13 @@ export default function GolfScoreTracker() {
       <Modal
         isOpen={isPlayerModalOpen}
         onClose={closePlayerModal}
-        title={editingPlayerId ? "Edit Player" : "Add New Player"}
+        title={
+          singlePlayer && editingPlayerId && editingPlayerId === meId
+            ? "Edit My Profile"
+            : editingPlayerId
+              ? "Edit Player"
+              : "Add New Player"
+        }
       >
         <PlayerForm
           key={editingPlayerId ?? "new-player"}
