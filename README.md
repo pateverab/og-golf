@@ -32,6 +32,11 @@ All data is stored locally in your browser using localStorage. No accounts, no s
 - Two color schemes: **Clubhouse** (deep green + gold, the former dark mode) and **Sunlight** (high-contrast cream + deep green for bright outdoor light, the former light mode)
 - Premium green + gold golf-themed design with large touch targets
 
+## Tips
+
+- **Cart lock:** tap the lock button on the hole screen to ignore stray taps while riding (press and hold the unlock pill for about a second to unlock). It stays on if the page reloads.
+- On iPhone, Guided Access fully disables touches: Settings > Accessibility > Guided Access, then triple-click the side button in OG Golf and turn Touch off.
+
 ## Limitations
 
 - iPhone lock screen and volume buttons cannot add strokes in the PWA. Keep the phone awake with OG Golf open to tap +1. Lock-screen volume scoring is not supported.

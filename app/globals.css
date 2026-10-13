@@ -17,6 +17,7 @@
   --og-on-primary: 236 208 143; /* #ecd08f Text on primary green */
   --og-accent: 212 168 76; /* #d4a84c Gold fill: +1, selected chips, NOW badge, primary buttons */
   --og-accent-hover: 201 154 58; /* #c99a3a Hover on gold fills (derived, not in schemes.md) */
+  --og-accent-pressed: 179 138 46; /* #b38a2e Pressed (:active) gold for selectable options (darker than accent; derived) */
   --og-on-accent: 5 27 20; /* #051b14 Text on gold */
   --og-accent-text: 111 76 12; /* #6f4c0c Gold as text on bg / surface */
   --og-accent-line: 111 76 12; /* #6f4c0c Gold outlines (Card, Hole Out, NOW, selected options) */
@@ -56,6 +57,7 @@
   --og-on-primary: 243 223 174; /* #f3dfae */
   --og-accent: 216 181 111; /* #d8b56f */
   --og-accent-hover: 230 197 133; /* #e6c585 */
+  --og-accent-pressed: 184 149 79; /* #b8954f */
   --og-on-accent: 6 35 26; /* #06231a */
   --og-accent-text: 220 187 120; /* #dcbb78 */
   --og-accent-line: 216 181 111; /* #d8b56f */

@@ -5,6 +5,8 @@ const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    // lib/selectable.ts builds the shared selected / pressed class strings.
+    "./lib/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -18,6 +20,7 @@ const config: Config = {
           "on-primary": "rgb(var(--og-on-primary) / <alpha-value>)",
           "accent": "rgb(var(--og-accent) / <alpha-value>)",
           "accent-hover": "rgb(var(--og-accent-hover) / <alpha-value>)",
+          "accent-pressed": "rgb(var(--og-accent-pressed) / <alpha-value>)",
           "on-accent": "rgb(var(--og-on-accent) / <alpha-value>)",
           "accent-text": "rgb(var(--og-accent-text) / <alpha-value>)",
           "accent-line": "rgb(var(--og-accent-line) / <alpha-value>)",

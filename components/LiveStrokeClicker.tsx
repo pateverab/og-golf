@@ -1,5 +1,6 @@
 "use client";
 
+import { OPTION_PRESSED_CLASS } from "@/lib/selectable";
 import { useEffect, useState } from "react";
 import type { Lie, ShotLog } from "@/lib/types";
 import {
@@ -172,10 +173,10 @@ export function LiveStrokeClicker({
               data-control={`lie-${opt.id}`}
               className={`h-[clamp(32px,5.6dvh,52px)] rounded-xl text-[clamp(13px,2dvh,16px)] font-semibold border-2 transition active:scale-[0.97] ${
                 active
-                  ? "bg-og-accent text-og-on-accent border-og-chip-selected-border"
+                  ? `bg-og-accent text-og-on-accent border-og-chip-selected-border ${OPTION_PRESSED_CLASS}`
                   : strokeEnabled
-                    ? "bg-og-chip text-og-accent-text border-og-chip-border"
-                    : "bg-og-chip text-og-accent-text border-og-accent-line"
+                    ? `bg-og-chip text-og-accent-text border-og-chip-border ${OPTION_PRESSED_CLASS}`
+                    : `bg-og-chip text-og-accent-text border-og-accent-line ${OPTION_PRESSED_CLASS}`
               }`}
             >
               {opt.label}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { optionPillClass } from "@/lib/selectable";
 import { THEME_LABELS, resolveTheme, setTheme, type Theme } from "@/lib/theme";
 
 const OPTIONS: Theme[] = ["dark", "light"];
@@ -53,7 +54,7 @@ export function ThemeToggle() {
             data-theme-option={option}
             onClick={() => choose(option)}
             className={`inline-flex h-9 sm:h-8 items-center gap-1 rounded-full px-2 sm:px-2.5 text-[11px] sm:text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-og-accent-line/60 ${
-              active ? "bg-og-accent text-og-on-accent" : "text-og-accent-text hover:bg-og-raised"
+              optionPillClass(active)
             }`}
           >
             <span className="hidden sm:inline-flex">

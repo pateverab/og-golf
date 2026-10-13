@@ -25,6 +25,8 @@ import {
   Lie,
 } from "@/lib/types";
 import { clearActiveRound as clearStoredActiveRound } from "@/lib/storage";
+import { clearCartLock } from "@/lib/cartLock";
+import { optionPillClass, optionSubtextClass, optionTileClass } from "@/lib/selectable";
 import {
   calculateHandicapForPlayer,
   recalculateAllHandicaps,
@@ -451,6 +453,7 @@ export default function GolfScoreTracker() {
     setActiveRound(null);
     setCurrentHole(1);
     clearStoredActiveRound();
+    clearCartLock();
     setActiveTab("home");
   };
 
@@ -475,6 +478,7 @@ export default function GolfScoreTracker() {
     const course = getCurrentCourse();
     if (!course) return;
     const restarted = withRestartedRound(activeRound, course);
+    clearCartLock();
     // An older incomplete draft of this round (same id) would still hold the
     // wiped scores; drop it so history can't resurrect them.
     const roundId = activeRound.id;
@@ -497,6 +501,7 @@ export default function GolfScoreTracker() {
     setManualScorePlayers([]);
     setHomeQuitOpen(false);
     clearStoredActiveRound();
+    clearCartLock();
     setActiveTab("home");
   };
 
@@ -727,19 +732,19 @@ export default function GolfScoreTracker() {
           <div className="order-3 w-full sm:w-auto flex gap-1 text-sm">
               <button
                 onClick={() => setActiveTab("home")}
-                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${activeTab === "home" ? "bg-og-accent text-og-on-accent font-semibold" : "text-og-accent-text hover:bg-og-raised"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${optionPillClass(activeTab === "home")} ${activeTab === "home" ? "font-semibold" : ""}`}
               >
                 Home
               </button>
               <button
                 onClick={() => setActiveTab("rounds")}
-                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${activeTab === "rounds" ? "bg-og-accent text-og-on-accent font-semibold" : "text-og-accent-text hover:bg-og-raised"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${optionPillClass(activeTab === "rounds")} ${activeTab === "rounds" ? "font-semibold" : ""}`}
               >
                 Rounds
               </button>
               <button
                 onClick={() => setActiveTab("stats")}
-                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${activeTab === "stats" ? "bg-og-accent text-og-on-accent font-semibold" : "text-og-accent-text hover:bg-og-raised"}`}
+                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-full transition ${optionPillClass(activeTab === "stats")} ${activeTab === "stats" ? "font-semibold" : ""}`}
               >
                 Stats
               </button>
@@ -1158,10 +1163,10 @@ export default function GolfScoreTracker() {
                   <button
                     key={course.id}
                     onClick={() => selectCourseForStart(course.id)}
-                    className={`text-left p-4 rounded-2xl border transition ${selectedCourseForStart === course.id ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                    className={`text-left p-4 rounded-2xl border transition ${optionTileClass(selectedCourseForStart === course.id)}`}
                   >
                     <div className="font-medium">{course.name}</div>
-                    <div className="text-xs text-og-muted">{course.location} • {course.holes.length} holes</div>
+                    <div className={`text-xs ${optionSubtextClass(selectedCourseForStart === course.id)}`}>{course.location} • {course.holes.length} holes</div>
                   </button>
                 ))}
               </div>
@@ -1191,13 +1196,13 @@ export default function GolfScoreTracker() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setRoundLengthForStart(18)}
-                      className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 18 ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${optionTileClass(roundLengthForStart === 18)}`}
                     >
                       <div className="font-medium">18 Holes</div>
                     </button>
                     <button
                       onClick={() => setRoundLengthForStart(9)}
-                      className={`p-4 rounded-2xl border text-left transition ${roundLengthForStart === 9 ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                      className={`p-4 rounded-2xl border text-left transition ${optionTileClass(roundLengthForStart === 9)}`}
                     >
                       <div className="font-medium">9 Holes</div>
                     </button>
@@ -1210,13 +1215,13 @@ export default function GolfScoreTracker() {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setNineSideForStartRound("front")}
-                        className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "front" ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                        className={`p-4 rounded-2xl border text-left transition ${optionTileClass(nineSideForStart === "front")}`}
                       >
                         Front 9 (Holes 1-9)
                       </button>
                       <button
                         onClick={() => setNineSideForStartRound("back")}
-                        className={`p-4 rounded-2xl border text-left transition ${nineSideForStart === "back" ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                        className={`p-4 rounded-2xl border text-left transition ${optionTileClass(nineSideForStart === "back")}`}
                       >
                         Back 9 (Holes 10-18)
                       </button>
@@ -1230,13 +1235,13 @@ export default function GolfScoreTracker() {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setStartingHoleForStart(1)}
-                        className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 1 ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                        className={`p-4 rounded-2xl border text-left transition ${optionTileClass(startingHoleForStart === 1)}`}
                       >
                         Hole 1
                       </button>
                       <button
                         onClick={() => setStartingHoleForStart(10)}
-                        className={`p-4 rounded-2xl border text-left transition ${startingHoleForStart === 10 ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                        className={`p-4 rounded-2xl border text-left transition ${optionTileClass(startingHoleForStart === 10)}`}
                       >
                         Hole 10
                       </button>
@@ -1256,13 +1261,13 @@ export default function GolfScoreTracker() {
                   <button
                     key={player.id}
                     onClick={() => togglePlayerForRound(player.id)}
-                    className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition ${selectedPlayersForStart.includes(player.id) ? "border-og-accent-line bg-og-raised" : "border-og-border"}`}
+                    className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition ${optionTileClass(selectedPlayersForStart.includes(player.id))}`}
                   >
                     <div>
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-xs text-og-muted">OG Index {player.handicap} · not USGA</div>
+                      <div className={`text-xs ${optionSubtextClass(selectedPlayersForStart.includes(player.id))}`}>OG Index {player.handicap} · not USGA</div>
                     </div>
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${selectedPlayersForStart.includes(player.id) ? "bg-og-accent text-og-on-accent border-og-accent-line" : "border-og-border"}`}>
+                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${selectedPlayersForStart.includes(player.id) ? "bg-og-on-accent text-og-accent border-og-on-accent" : "border-og-border group-active:border-og-on-accent"}`}>
                       {selectedPlayersForStart.includes(player.id) && "✓"}
                     </div>
                   </button>

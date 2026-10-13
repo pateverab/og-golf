@@ -76,6 +76,17 @@ const PAIRS: [string, string, number, string][] = [
   ["live", "now-bg", 4.5, "'in play' label / NOW cell"],
   ["accent-text", "disabled-bg", 4.5, "Lie hint (gold) / disabled +1 bg"],
   ["on-danger", "danger", 4.5, "Delete label / danger fill"],
+  // Selected / pressed options (course, players, 9/18, start hole, tabs, toggles, chips)
+  ["on-accent", "accent", 4.5, "Selected option label / gold fill"],
+  ["on-accent", "accent-pressed", 4.5, "Pressed option label / pressed gold"],
+  ["accent", "on-accent", 4.5, "Player check mark / its dark disc on gold"],
+  ["accent-text", "surface", 4.5, "Unselected option label / surface"],
+  ["text", "surface", 4.5, "Unselected option tile text / surface"],
+  ["muted", "surface", 4.5, "Unselected option subtext / surface"],
+  ["chip-selected-border", "bg", 3, "Selected option boundary / background"],
+  // Cart lock banner
+  ["text", "raised", 4.5, "Lock banner text / raised pill"],
+  ["accent-line", "raised", 3, "Lock banner outline / raised pill"],
 ];
 
 const schemes = { Sunlight: parseBlock(":root"), Clubhouse: parseBlock(".dark") } as const;
@@ -98,6 +109,12 @@ describe("theme tokens", () => {
   it("uses each scheme's background as the browser chrome color", () => {
     expect(THEME_CHROME_COLORS.light).toBe(hex(schemes.Sunlight.bg));
     expect(THEME_CHROME_COLORS.dark).toBe(hex(schemes.Clubhouse.bg));
+  });
+
+  it("pressed gold is darker than the gold fill in both schemes", () => {
+    for (const tokens of Object.values(schemes)) {
+      expect(luminance(tokens["accent-pressed"])).toBeLessThan(luminance(tokens.accent));
+    }
   });
 
   it("matches the approved hero values", () => {
