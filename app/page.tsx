@@ -23,6 +23,7 @@ import {
   NineSide,
   RoundLength,
   Lie,
+  TeeGender,
 } from "@/lib/types";
 import { clearActiveRound as clearStoredActiveRound } from "@/lib/storage";
 import { clearCartLock } from "@/lib/cartLock";
@@ -53,6 +54,15 @@ import { useScreenWakeLock } from "@/hooks/useScreenWakeLock";
 import { canAddStroke } from "@/lib/lies";
 import { RoundExportPanel } from "@/components/RoundExportPanel";
 import { MULTIPLAYER_ENABLED } from "@/lib/features";
+import {
+  formatTeeLabel,
+  migrateCourses,
+  pickInitialTee,
+  readLastTees,
+  snapshotTee,
+  teeRatingFor,
+  writeLastTee,
+} from "@/lib/tees";
 import {
   createSinglePlayerRound,
   focusPlayerIdForRound,
@@ -103,6 +113,8 @@ export default function GolfScoreTracker() {
   }, [currentHole]);
 
   const [selectedCourseForStart, setSelectedCourseForStart] = useState<string>("");
+  const [teeIdForStart, setTeeIdForStart] = useState<string | null>(null);
+  const [teeGenderForStart, setTeeGenderForStart] = useState<TeeGender>("men");
   const [selectedPlayersForStart, setSelectedPlayersForStart] = useState<string[]>([]);
   const [roundLengthForStart, setRoundLengthForStart] = useState<RoundLength>(18);
   const [nineSideForStart, setNineSideForStart] = useState<NineSide>("front");
@@ -218,7 +230,12 @@ export default function GolfScoreTracker() {
     setEditingPlayerId(null);
   };
 
-  const handleSavePlayer = (name: string, nickname: string, startingHandicap: number) => {
+  const handleSavePlayer = (
+    name: string,
+    nickname: string,
+    startingHandicap: number,
+    gender: TeeGender = "men"
+  ) => {
     if (editingPlayerId) {
       setPlayers((prev) =>
         prev.map((p) => {
@@ -228,6 +245,7 @@ export default function GolfScoreTracker() {
             name,
             nickname: nickname || undefined,
             startingHandicap,
+            gender,
             handicap: calculateHandicapForPlayer(
               p.id,
               rounds,
@@ -246,6 +264,7 @@ export default function GolfScoreTracker() {
         nickname: nickname || undefined,
         handicap: startingHandicap,
         startingHandicap,
+        gender,
         updatedAt: new Date().toISOString(),
       };
       setPlayers((prev) => [...prev, newPlayer]);
@@ -261,6 +280,7 @@ export default function GolfScoreTracker() {
   // ==================== START NEW ROUND ====================
   const openStartRoundModal = () => {
     setSelectedCourseForStart("");
+    setTeeIdForStart(null);
     setSelectedPlayersForStart([]);
     setRoundLengthForStart(18);
     setNineSideForStart("front");
@@ -274,10 +294,38 @@ export default function GolfScoreTracker() {
 
     const defaults = getDefaultRoundConfig(course);
     setSelectedCourseForStart(courseId);
+    // Tee: last one used on this course, else the first rated for my gender.
+    const last = readLastTees();
+    const gender = last[courseId]?.gender ?? me?.gender ?? "men";
+    setTeeGenderForStart(gender);
+    setTeeIdForStart(pickInitialTee(course, gender, last));
     setRoundLengthForStart(defaults.roundLength);
     setNineSideForStart(defaults.nineSide);
     setStartingHoleForStart(defaults.startingHole);
   };
+
+  const setTeeGenderForStartRound = (gender: TeeGender) => {
+    setTeeGenderForStart(gender);
+    const course = courses.find((c) => c.id === selectedCourseForStart);
+    if (!course) return;
+    const current = course.tees?.find((t) => t.id === teeIdForStart);
+    if (!current || !teeRatingFor(current, gender)) {
+      setTeeIdForStart(pickInitialTee(course, gender, readLastTees()));
+    }
+  };
+
+  /** Tee snapshot for the round being started (undefined = legacy, no tee). */
+  const teeSnapshotForStart = (course: Course) => {
+    if (!teeIdForStart) return undefined;
+    const snap = snapshotTee(course, teeIdForStart, teeGenderForStart);
+    if (!snap) return undefined;
+    writeLastTee(course.id, snap.teeId, snap.gender);
+    return snap;
+  };
+  const startCourseNeedsTee = (() => {
+    const c = courses.find((cc) => cc.id === selectedCourseForStart);
+    return Boolean(c?.tees?.some((t) => teeRatingFor(t, teeGenderForStart)));
+  })();
 
   const setNineSideForStartRound = (side: NineSide) => {
     setNineSideForStart(side);
@@ -300,7 +348,8 @@ export default function GolfScoreTracker() {
         { roundLength: roundLengthForStart, nineSide: nineSideForStart, startingHole: startingHoleForStart },
         { id: generateId() }
       );
-      setActiveRound(round);
+      const tee = teeSnapshotForStart(course);
+      setActiveRound(tee ? { ...round, tee } : round);
       setRoundPaused(false);
       setCurrentHole(firstHole);
       setIsStartRoundModalOpen(false);
@@ -333,6 +382,8 @@ export default function GolfScoreTracker() {
       nineSide: roundConfig.nineSide,
       startingHole: roundConfig.startingHole,
     };
+    const tee = teeSnapshotForStart(course);
+    if (tee) newActiveRound.tee = tee;
 
     setActiveRound(newActiveRound);
     setRoundPaused(false);
@@ -483,6 +534,7 @@ export default function GolfScoreTracker() {
       roundLength: activeRound.roundLength,
       nineSide: activeRound.nineSide,
       startingHole: activeRound.startingHole,
+      ...(activeRound.tee ? { tee: activeRound.tee } : {}),
     };
 
     const updatedRounds = existing
@@ -595,6 +647,7 @@ export default function GolfScoreTracker() {
       roundLength: roundConfig.roundLength,
       nineSide: roundConfig.nineSide,
       startingHole: roundConfig.startingHole,
+      ...(round.tee ? { tee: round.tee } : {}),
     };
 
     const holesInPlay = getHolesInPlay(course, resumed);
@@ -668,7 +721,8 @@ export default function GolfScoreTracker() {
           return;
         }
 
-        if (backup.courses) setCourses(backup.courses);
+        // Old backups have no tees / stroke indexes: seed known courses the same way as on load.
+        if (backup.courses) setCourses(migrateCourses(backup.courses).courses);
         if (backup.players) setPlayers(backup.players);
         if (backup.rounds) setRounds(backup.rounds);
 
@@ -1176,6 +1230,16 @@ export default function GolfScoreTracker() {
                       <div className="text-sm text-og-muted mt-1">
                         {getRoundFormatLabel(viewingCourse, viewingRound)}
                       </div>
+                      {viewingRound.tee && (
+                        <div className="text-sm text-og-muted flex items-center gap-1.5" data-control="round-tee">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full border border-og-border"
+                            style={{ backgroundColor: viewingRound.tee.color }}
+                            aria-hidden="true"
+                          />
+                          {formatTeeLabel(viewingRound.tee)}
+                        </div>
+                      )}
                     </div>
                     {!viewingRound.completed && (
                       <button
@@ -1325,6 +1389,64 @@ export default function GolfScoreTracker() {
             )}
           </div>
 
+          {/* Tee (after course). Courses without tees play as before (no rating). */}
+          {selectedCourseForStart && (() => {
+            const startCourse = courses.find((c) => c.id === selectedCourseForStart);
+            const tees = startCourse?.tees ?? [];
+            if (!startCourse || tees.length === 0) return null;
+            return (
+              <div data-control="tee-picker">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium text-og-accent-text">Tee</div>
+                  <div className="flex gap-1 text-xs" role="group" aria-label="Ratings">
+                    {(["men", "women"] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setTeeGenderForStartRound(g)}
+                        aria-pressed={teeGenderForStart === g}
+                        data-control={`tee-gender-${g}`}
+                        className={`px-3 py-1.5 rounded-full border ${optionPillClass(teeGenderForStart === g)} ${teeGenderForStart === g ? "border-og-chip-selected-border font-semibold" : "border-og-border"}`}
+                      >
+                        {g === "men" ? "Men's" : "Women's"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {tees.map((t) => {
+                    const rating = teeRatingFor(t, teeGenderForStart);
+                    const selected = teeIdForStart === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={!rating}
+                        onClick={() => setTeeIdForStart(t.id)}
+                        data-control="tee-option"
+                        data-tee-name={t.name}
+                        aria-pressed={selected}
+                        className={`p-3 rounded-2xl border text-left transition disabled:opacity-40 disabled:cursor-not-allowed ${optionTileClass(selected)}`}
+                      >
+                        <div className="flex items-center gap-2 font-medium">
+                          <span
+                            className="inline-block w-3.5 h-3.5 rounded-full border border-og-border shrink-0"
+                            style={{ backgroundColor: t.color }}
+                            aria-hidden="true"
+                          />
+                          {t.name}
+                        </div>
+                        <div className={`text-xs tabular-nums mt-0.5 ${optionSubtextClass(selected)}`}>
+                          {rating ? `${rating.rating.toFixed(1)} / ${rating.slope} · Par ${t.par}` : "No rating"}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Round Options */}
           {selectedCourseForStart && (() => {
             const startCourse = courses.find((c) => c.id === selectedCourseForStart);
@@ -1432,7 +1554,11 @@ export default function GolfScoreTracker() {
             </button>
             <button
               onClick={startRound}
-              disabled={!selectedCourseForStart || (singlePlayer ? !meId : selectedPlayersForStart.length === 0)}
+              disabled={
+                !selectedCourseForStart ||
+                (startCourseNeedsTee && !teeIdForStart) ||
+                (singlePlayer ? !meId : selectedPlayersForStart.length === 0)
+              }
               data-control="start-round-confirm"
               className="golf-btn flex-1 py-3.5 rounded-2xl font-semibold disabled:opacity-50"
             >

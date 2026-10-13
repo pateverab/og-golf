@@ -3,6 +3,42 @@
 export interface Hole {
   number: number;
   par: number;
+  /** WHS stroke index (handicap allocation order), 1 = hardest. Unique per course. Optional on legacy courses. */
+  strokeIndex?: number;
+}
+
+/** Whose rating/slope applies on a tee. */
+export type TeeGender = "men" | "women";
+
+/** Course rating + slope for one gender on one tee (18 holes). */
+export interface TeeRating {
+  rating: number;
+  slope: number;
+}
+
+/** A set of tees on a course. Each gender's rating is optional. */
+export interface Tee {
+  id: string;
+  name: string;
+  /** CSS color for the tee marker, e.g. "#1e4fd8". */
+  color: string;
+  par: number;
+  men?: TeeRating;
+  women?: TeeRating;
+}
+
+/**
+ * The tee a round was played from, snapshotted at round start so later
+ * course/tee edits never rewrite history.
+ */
+export interface RoundTee {
+  teeId: string;
+  name: string;
+  color: string;
+  gender: TeeGender;
+  rating: number;
+  slope: number;
+  par: number;
 }
 
 export interface Course {
@@ -11,6 +47,8 @@ export interface Course {
   location: string;
   holes: Hole[]; // Array of pars per hole. Length determines total holes.
   createdAt: string;
+  /** Tees with rating/slope (WHS). Absent on legacy courses. */
+  tees?: Tee[];
 }
 
 export interface Player {
@@ -21,6 +59,8 @@ export interface Player {
   handicap: number;
   /** Stored starting/fallback HCP; used when player has no qualifying completed rounds. */
   startingHandicap?: number;
+  /** Which tee ratings apply by default (men's when absent). */
+  gender?: TeeGender;
   updatedAt: string;
 }
 
@@ -53,6 +93,8 @@ export interface Round {
   roundLength?: RoundLength;
   nineSide?: NineSide;
   startingHole?: 1 | 10;
+  /** Tee played (snapshot). Absent = legacy round. */
+  tee?: RoundTee;
 }
 
 // Helper type for the live round in progress (not yet saved)
@@ -80,6 +122,8 @@ export interface ActiveRound {
   roundLength: RoundLength;
   nineSide: NineSide;
   startingHole: 1 | 10;
+  /** Tee played (snapshot taken at round start). Absent = legacy round. */
+  tee?: RoundTee;
 }
 
 // For past round display + calculations

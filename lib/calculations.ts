@@ -10,6 +10,8 @@ import {
   RoundLength,
   ActiveRound,
 } from "./types";
+import type { Tee } from "./types";
+import { ARRAYANES_SEED, QUITO_SEED } from "./tees";
 // Re-export types and everything else needed by other files
 export type {
   Course,
@@ -263,22 +265,29 @@ export interface CourseTemplate {
   location: string;
   holeCount: number;
   suggestedPars?: number[];
+  /** WHS stroke index per hole (1 = hardest). */
+  strokeIndex?: number[];
+  /** Tees with men's/women's rating + slope. */
+  tees?: Tee[];
 }
 
 export const SUGGESTED_COURSE_TEMPLATES: CourseTemplate[] = [
   {
-  name: "Quito Tenis y Golf Club",
-  location: "Quito, Ecuador",
-  holeCount: 18,
-  suggestedPars: [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 5, 4, 3, 4, 4, 3, 5, 4]
-},
-  { 
-    name: "Arrayanes Country Club", 
-    location: "Quito, Ecuador", 
+    name: "Quito Tenis y Golf Club",
+    location: "Quito, Ecuador",
     holeCount: 18,
-    suggestedPars: [4, 4, 5, 3, 4, 5, 3, 4, 4, 4, 3, 5, 4, 3, 5, 4, 3, 4] 
+    suggestedPars: [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 5, 4, 3, 4, 4, 3, 5, 4],
+    strokeIndex: QUITO_SEED.strokeIndex,
+    tees: QUITO_SEED.tees,
   },
-  
+  {
+    name: "Arrayanes Country Club",
+    location: "Quito, Ecuador",
+    holeCount: 18,
+    suggestedPars: [4, 4, 5, 3, 4, 5, 3, 4, 4, 4, 3, 5, 4, 3, 5, 4, 3, 4],
+    strokeIndex: ARRAYANES_SEED.strokeIndex,
+    tees: ARRAYANES_SEED.tees,
+  },
 ];
 
 // Quick par total helper

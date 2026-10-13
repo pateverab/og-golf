@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import type { Player } from "@/lib/types";
+import type { Player, TeeGender } from "@/lib/types";
+import { optionTileClass } from "@/lib/selectable";
 import { getPlayerStartingHandicap } from "@/lib/calculations";
 
 interface PlayerFormProps {
-  onSave: (name: string, nickname: string, startingHandicap: number) => void;
+  onSave: (name: string, nickname: string, startingHandicap: number, gender: TeeGender) => void;
   /** Omit to hide Cancel (first-run Me setup has nothing to cancel to). */
   onCancel?: () => void;
   /** Overrides the submit label for a new player. */
@@ -30,8 +31,11 @@ export function PlayerForm({
     initialPlayer ? getPlayerStartingHandicap(initialPlayer) : 0
   );
 
+  const [gender, setGender] = useState<TeeGender>(initialPlayer?.gender ?? "men");
+
   useEffect(() => {
     if (!initialPlayer) return;
+    setGender(initialPlayer.gender ?? "men");
     setName(initialPlayer.name);
     setNickname(initialPlayer.nickname ?? "");
     setHandicap(getPlayerStartingHandicap(initialPlayer));
@@ -40,7 +44,7 @@ export function PlayerForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave(name.trim(), nickname.trim(), handicap);
+    onSave(name.trim(), nickname.trim(), handicap, gender);
   };
 
   return (
@@ -105,6 +109,25 @@ export function PlayerForm({
             USGA).
           </p>
         )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5 text-og-accent-text">Tee ratings</label>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Tee ratings">
+          {(["men", "women"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(g)}
+              aria-pressed={gender === g}
+              data-control={`gender-${g}`}
+              className={`py-2.5 rounded-xl border text-sm font-semibold transition ${optionTileClass(gender === g)}`}
+            >
+              {g === "men" ? "Men's" : "Women's"}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-og-muted mt-1.5">Which course rating and slope to use by default. You can change it per round.</p>
       </div>
 
       <div className="flex gap-3 pt-3">
