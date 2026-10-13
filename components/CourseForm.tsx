@@ -1,5 +1,6 @@
 'use client';
 
+import { optionSubtextClass, optionTileClass } from "@/lib/selectable";
 import React, { useEffect, useState } from "react";
 import {
   Course,
@@ -124,26 +125,18 @@ export function CourseForm({ onSave, onCancel, initialCourse }: CourseFormProps)
           <button
             type="button"
             onClick={() => setHoleCountAndResize(9)}
-            className={`p-4 rounded-2xl border text-left transition ${
-              holeCount === 9
-                ? "border-og-accent-line bg-og-raised"
-                : "border-og-border"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition ${optionTileClass(holeCount === 9)}`}
           >
             <div className="font-medium">9 Holes</div>
-            <div className="text-xs text-og-muted mt-0.5">True 9-hole layout</div>
+            <div className={`text-xs mt-0.5 ${optionSubtextClass(holeCount === 9)}`}>True 9-hole layout</div>
           </button>
           <button
             type="button"
             onClick={() => setHoleCountAndResize(18)}
-            className={`p-4 rounded-2xl border text-left transition ${
-              holeCount === 18
-                ? "border-og-accent-line bg-og-raised"
-                : "border-og-border"
-            }`}
+            className={`p-4 rounded-2xl border text-left transition ${optionTileClass(holeCount === 18)}`}
           >
             <div className="font-medium">18 Holes</div>
-            <div className="text-xs text-og-muted mt-0.5">Full course</div>
+            <div className={`text-xs mt-0.5 ${optionSubtextClass(holeCount === 18)}`}>Full course</div>
           </button>
         </div>
       </div>

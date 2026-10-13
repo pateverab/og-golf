@@ -16,6 +16,15 @@ import { HoleSummaryStrip } from "@/components/HoleSummaryStrip";
 import { PlayCardOverlay } from "@/components/PlayCardOverlay";
 import { QuitRoundModal } from "@/components/QuitRoundModal";
 import { usePlaySurfaceLock } from "@/hooks/usePlaySurfaceLock";
+import { OPTION_PRESSED_CLASS } from "@/lib/selectable";
+import { CartLockOverlay, LockGlyph } from "@/components/CartLockOverlay";
+import {
+  clearCartLock,
+  createCartLock,
+  isCartLockedForRound,
+  readCartLock,
+  writeCartLock,
+} from "@/lib/cartLock";
 
 export interface PlayHoleShellProps {
   activeRound: ActiveRound;
@@ -103,6 +112,21 @@ export function PlayHoleShell({
   const [selectedId, setSelectedId] = useState<string>(() => firstUnscored());
   const [cardOpen, setCardOpen] = useState(false);
   const [quitOpen, setQuitOpen] = useState(false);
+  // Cart lock: a UI shield only (scores untouched), persisted per round id.
+  const [cartLocked, setCartLocked] = useState(false);
+  useEffect(() => {
+    setCartLocked(isCartLockedForRound(readCartLock(), activeRound.id));
+  }, [activeRound.id]);
+  const lockCart = () => {
+    setCardOpen(false);
+    setQuitOpen(false);
+    writeCartLock(createCartLock(activeRound.id));
+    setCartLocked(true);
+  };
+  const unlockCart = () => {
+    clearCartLock();
+    setCartLocked(false);
+  };
 
   // New hole → first player who still needs a score on it.
   useEffect(() => {
@@ -151,20 +175,20 @@ export function PlayHoleShell({
       data-play-root
     >
       {/* Top bar: course, hole, par, Card, Quit */}
-      <header className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(4px,1dvh,10px)] pb-[clamp(4px,1dvh,8px)] flex items-center gap-2">
+      <header className="flex-none w-full max-w-xl mx-auto px-3 pt-[clamp(4px,1dvh,10px)] pb-[clamp(4px,1dvh,8px)] flex items-center gap-1.5">
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-medium tracking-wider text-og-accent-text truncate">
             {course.name} · {formatLabel}
           </div>
-          <div className="flex items-baseline gap-2 leading-tight">
-            <span className="text-[clamp(20px,3.6dvh,28px)] font-bold tabular-nums" data-control="hole-title">
+          <div className="flex items-baseline gap-1.5 leading-tight whitespace-nowrap" data-control="hole-title-row">
+            <span className="text-[clamp(20px,3.6dvh,26px)] font-bold tabular-nums" data-control="hole-title">
               Hole {currentHole}
             </span>
-            <span className="text-sm font-semibold px-2.5 py-px rounded-full bg-og-par-pill text-og-on-par-pill">
+            <span className="shrink-0 text-sm font-semibold px-2 py-px rounded-full bg-og-par-pill text-og-on-par-pill">
               Par {par}
             </span>
             {holeIndex >= 0 && (
-              <span className="text-[11px] text-og-muted tabular-nums">
+              <span className="min-w-0 truncate text-[11px] text-og-muted tabular-nums">
                 {holeIndex + 1}/{holesInPlay.length}
               </span>
             )}
@@ -172,9 +196,19 @@ export function PlayHoleShell({
         </div>
         <button
           type="button"
+          onClick={lockCart}
+          data-control="cart-lock"
+          aria-label="Lock screen (cart lock)"
+          title="Lock screen"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] w-10 rounded-xl border-2 border-og-border text-og-accent-text flex items-center justify-center active:bg-og-accent-pressed active:text-og-on-accent active:border-og-accent-pressed"
+        >
+          <LockGlyph size={18} />
+        </button>
+        <button
+          type="button"
           onClick={() => setCardOpen(true)}
           data-control="card"
-          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-4 rounded-xl border-2 border-og-accent-line text-og-accent-text text-sm font-bold active:bg-og-accent/15"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3 rounded-xl border-2 border-og-accent-line text-og-accent-text text-sm font-bold active:bg-og-accent/15"
         >
           Card
         </button>
@@ -182,7 +216,7 @@ export function PlayHoleShell({
           type="button"
           onClick={() => setQuitOpen(true)}
           data-control="quit"
-          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3.5 rounded-xl border-2 border-og-danger text-og-danger text-sm font-bold active:bg-og-danger/10"
+          className="shrink-0 h-[clamp(40px,6.5dvh,48px)] px-3 rounded-xl border-2 border-og-danger text-og-danger text-sm font-bold active:bg-og-danger/10"
         >
           Quit
         </button>
@@ -222,10 +256,10 @@ export function PlayHoleShell({
                 data-control="player-chip"
                 className={`flex-1 min-w-0 h-[clamp(36px,6.5dvh,56px)] rounded-xl border-2 px-1.5 flex flex-col items-center justify-center leading-tight transition ${
                   selected
-                    ? "bg-og-accent text-og-on-accent border-og-chip-selected-border"
+                    ? `bg-og-accent text-og-on-accent border-og-chip-selected-border ${OPTION_PRESSED_CLASS}`
                     : score !== null
-                      ? "bg-og-raised border-og-border text-og-text"
-                      : "bg-og-surface border-og-border"
+                      ? `bg-og-raised border-og-border text-og-text ${OPTION_PRESSED_CLASS}`
+                      : `bg-og-surface border-og-border ${OPTION_PRESSED_CLASS}`
                 }`}
               >
                 <span className="max-w-full truncate text-[clamp(12px,1.9dvh,15px)] font-semibold">
@@ -233,7 +267,7 @@ export function PlayHoleShell({
                 </span>
                 <span
                   className={`text-[11px] tabular-nums font-semibold ${
-                    selected ? "text-og-on-accent/80" : score !== null ? vsParColor(score - par) : "text-og-muted"
+                    selected ? "text-og-on-accent" : score !== null ? vsParColor(score - par) : "text-og-muted"
                   }`}
                 >
                   {state}
@@ -403,6 +437,8 @@ export function PlayHoleShell({
           onDelete();
         }}
       />
+
+      {cartLocked && <CartLockOverlay onUnlock={unlockCart} />}
 
       {cardOpen && (
         <PlayCardOverlay

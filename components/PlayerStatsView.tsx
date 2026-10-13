@@ -14,6 +14,7 @@ import {
 import type { Player, Round, Course } from "@/lib/types";
 import { getPlayerStats } from "@/lib/calculations";
 import { resolveTheme } from "@/lib/theme";
+import { optionPillClass } from "@/lib/selectable";
 
 /** rgb()/rgba() string for an og-* theme token (see app/globals.css). */
 function themeColor(varName: string, alpha = 1): string {
@@ -143,8 +144,8 @@ export function PlayerStatsView({
             onClick={() => setSelectedPlayerId(player.id)}
             className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
               selectedPlayerId === player.id
-                ? "bg-og-accent text-og-on-accent font-semibold"
-                : "bg-og-surface text-og-accent-text hover:border-og-accent-line/40 border border-transparent"
+                ? `${optionPillClass(true)} font-semibold border border-og-chip-selected-border`
+                : `bg-og-surface ${optionPillClass(false)} border border-og-border`
             }`}
           >
             {player.name}
