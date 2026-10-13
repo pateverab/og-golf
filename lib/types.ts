@@ -59,6 +59,12 @@ export interface Player {
   handicap: number;
   /** Stored starting/fallback HCP; used when player has no qualifying completed rounds. */
   startingHandicap?: number;
+  /** OG index from the legacy formula (avg vs-par, starting value until 1 round). Kept for comparison. */
+  legacyOgIndex?: number;
+  /** WHS Handicap Index from tee'd rounds; absent with fewer than 3 differentials. */
+  whsIndex?: number;
+  /** Which value `handicap` currently shows. */
+  indexSource?: "whs" | "legacy";
   /** Which tee ratings apply by default (men's when absent). */
   gender?: TeeGender;
   updatedAt: string;

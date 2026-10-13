@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import type { Player, TeeGender } from "@/lib/types";
 import { optionTileClass } from "@/lib/selectable";
 import { getPlayerStartingHandicap } from "@/lib/calculations";
+import { WHS_MAX_INDEX } from "@/lib/whs";
 
 interface PlayerFormProps {
   onSave: (name: string, nickname: string, startingHandicap: number, gender: TeeGender) => void;
@@ -82,7 +83,7 @@ export function PlayerForm({
           <input
             type="range"
             min={-10}
-            max={40}
+            max={WHS_MAX_INDEX}
             step={0.5}
             value={handicap}
             onChange={(e) => setHandicap(parseFloat(e.target.value))}
@@ -93,7 +94,12 @@ export function PlayerForm({
               type="number"
               step={0.5}
               value={handicap}
-              onChange={(e) => setHandicap(parseFloat(e.target.value) || 0)}
+              min={-10}
+              max={WHS_MAX_INDEX}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value) || 0;
+                setHandicap(Math.min(WHS_MAX_INDEX, Math.max(-10, v)));
+              }}
               className="golf-input w-full rounded-xl px-3 py-2 text-center text-xl font-semibold"
             />
           </div>

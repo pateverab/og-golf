@@ -29,7 +29,7 @@ import { clearActiveRound as clearStoredActiveRound } from "@/lib/storage";
 import { clearCartLock } from "@/lib/cartLock";
 import { optionPillClass, optionSubtextClass, optionTileClass } from "@/lib/selectable";
 import {
-  calculateHandicapForPlayer,
+  withRecalculatedIndexes,
   recalculateAllHandicaps,
   getTotalScoreForPlayerInRound,
   getScoreVsParForPlayerInRound,
@@ -132,6 +132,14 @@ export default function GolfScoreTracker() {
   }, [storageHydrated, players, rounds, meId]);
   const me = players.find((p) => p.id === meId) ?? null;
   const singlePlayer = !MULTIPLAYER_ENABLED;
+
+  // Keep every player's index in step with rounds/courses: covers finishing,
+  // editing and deleting rounds, course edits and backup imports. A no-op
+  // (same array) when nothing changed, so it can't loop.
+  useEffect(() => {
+    if (!storageHydrated) return;
+    setPlayers((prev) => recalculateAllHandicaps(prev, rounds, courses));
+  }, [storageHydrated, rounds, courses, setPlayers]);
 
   // Past round detail
   const [viewingRoundId, setViewingRoundId] = useState<string | null>(null);
@@ -240,21 +248,16 @@ export default function GolfScoreTracker() {
       setPlayers((prev) =>
         prev.map((p) => {
           if (p.id !== editingPlayerId) return p;
-          const updated: Player = {
+          const edited: Player = {
             ...p,
             name,
             nickname: nickname || undefined,
             startingHandicap,
             gender,
-            handicap: calculateHandicapForPlayer(
-              p.id,
-              rounds,
-              courses,
-              startingHandicap
-            ),
             updatedAt: new Date().toISOString(),
           };
-          return updated;
+          // WHS Index if 3+ tee'd rounds, else the legacy OG value (both stored).
+          return withRecalculatedIndexes(edited, rounds, courses);
         })
       );
     } else {
